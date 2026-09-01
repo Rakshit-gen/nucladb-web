@@ -13,6 +13,8 @@ const eslintConfig = defineConfig([
     "build/**",
     "next-env.d.ts",
     ".source/**",
+    // Vendored, unmodified: Go's own wasm_exec.js glue and generated wasm.
+    "public/wasm/**",
   ]),
 ]);
 
