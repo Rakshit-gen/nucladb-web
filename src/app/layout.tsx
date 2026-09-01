@@ -22,7 +22,7 @@ const mono = JetBrains_Mono({
   weight: ["400", "500"],
 });
 
-const siteUrl = "https://nucladb.dev";
+const siteUrl = "https://nucladb-web.vercel.app";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
