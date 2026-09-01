@@ -29,6 +29,9 @@ export function Nav() {
           <Link href="/docs" className="transition-colors hover:text-white">
             Docs
           </Link>
+          <Link href="/#playground" className="transition-colors hover:text-white">
+            Playground
+          </Link>
           <Link href="/#benchmarks" className="transition-colors hover:text-white">
             Benchmarks
           </Link>

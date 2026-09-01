@@ -1,5 +1,6 @@
 import { Nav } from "@/components/nav";
 import { Hero } from "@/components/hero";
+import { PlaygroundSection } from "@/components/playground-section";
 import { ProductSection } from "@/components/product-section";
 import { ArchitectureSection } from "@/components/architecture-section";
 import { BenchmarksSection } from "@/components/benchmarks-section";
@@ -15,6 +16,7 @@ export default function Home() {
       <Nav />
       <main>
         <Hero />
+        <PlaygroundSection />
         <ProductSection />
         <ArchitectureSection />
         <BenchmarksSection />
