@@ -4,25 +4,25 @@ const STAGES = [
   {
     label: "Client",
     title: "gRPC :9090 · REST :8080",
-    body: "REST is a hand-written JSON translation layer over the gRPC service, not grpc-gateway, since vendoring the full googleapis proto tree isn't worth it for five routes.",
+    body: "REST is a hand-written JSON layer over gRPC, not grpc-gateway: not worth vendoring the full googleapis proto tree for five routes.",
     code: "internal/api/grpc · internal/api/gateway",
   },
   {
     label: "Routing",
     title: "engine.Store",
-    body: "Tenant routing, storage quotas, and QPS rate limits are enforced here, before a request ever reaches an engine. One Engine is opened lazily per tenant, on first access.",
+    body: "Tenant routing, storage quotas, and QPS limits are enforced here before a request reaches an engine, opened lazily per tenant.",
     code: "internal/engine.Store",
   },
   {
     label: "Write path",
     title: "WAL → HNSW graph → PQ (optional)",
-    body: "Every write is fsync'd to the write-ahead log before it's acknowledged, then applied to the in-memory HNSW graph. Product quantization compresses vectors after that, if enabled.",
+    body: "Every write fsyncs to the WAL before ack, then applies to the in-memory HNSW graph, with optional PQ compression after.",
     code: "internal/storage/wal · internal/index/hnsw · internal/index/pq",
   },
   {
     label: "Durability",
     title: "mmap-backed snapshot",
-    body: "Periodic atomic snapshots (write-to-temp, rename-into-place) let a restart skip replaying the WAL from empty, and let a dataset larger than RAM page in via the OS instead of failing.",
+    body: "Atomic write-to-temp, rename-into-place snapshots let a restart skip WAL replay, and let a dataset larger than RAM page in via the OS.",
     code: "internal/storage/segment",
   },
 ];
