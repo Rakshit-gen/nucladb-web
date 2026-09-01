@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { motion } from "framer-motion";
 import { Reveal } from "./reveal";
 
 const EF_ROWS = [
@@ -10,6 +13,20 @@ const EF_ROWS = [
 ];
 
 const MAX_QPS = Math.max(...EF_ROWS.flatMap((r) => [r.nQps, r.qQps]));
+
+function Bar({ pct, delay, className }: { pct: number; delay: number; className: string }) {
+  return (
+    <div className="h-2 flex-1 rounded-full bg-white/5">
+      <motion.div
+        className={`h-2 rounded-full ${className}`}
+        initial={{ width: 0 }}
+        whileInView={{ width: `${pct}%` }}
+        viewport={{ once: true, margin: "-40px" }}
+        transition={{ duration: 0.8, delay, ease: [0.16, 1, 0.3, 1] }}
+      />
+    </div>
+  );
+}
 
 export function BenchmarksSection() {
   return (
@@ -73,20 +90,26 @@ export function BenchmarksSection() {
         <Reveal delay={0.15} className="mt-16">
           <p className="kicker kicker--on-dark mb-6">Queries per second, by efSearch</p>
           <div className="space-y-5 rounded-2xl border border-white/10 bg-white/[0.03] p-7">
-            {EF_ROWS.map((row) => {
+            {EF_ROWS.map((row, i) => {
               const nPct = (row.nQps / MAX_QPS) * 100;
               const qPct = (row.qQps / MAX_QPS) * 100;
+              const rowDelay = i * 0.08;
               return (
-                <div key={row.ef} className="flex items-center gap-4">
+                <motion.div
+                  key={row.ef}
+                  className="flex items-center gap-4"
+                  initial={{ opacity: 0, x: -8 }}
+                  whileInView={{ opacity: 1, x: 0 }}
+                  viewport={{ once: true, margin: "-40px" }}
+                  transition={{ duration: 0.5, delay: rowDelay }}
+                >
                   <span className="w-12 shrink-0 font-mono-ui text-[0.78rem] text-white/40">ef {row.ef}</span>
                   <div className="flex-1 space-y-2">
                     <div className="flex items-center gap-3">
                       <span className="w-16 shrink-0 font-mono-ui text-[0.7rem] uppercase tracking-wider text-white/40">
                         NuclaDB
                       </span>
-                      <div className="h-2 flex-1 rounded-full bg-white/5">
-                        <div className="h-2 rounded-full bg-glow-cyan" style={{ width: `${nPct}%` }} />
-                      </div>
+                      <Bar pct={nPct} delay={rowDelay + 0.1} className="bg-glow-cyan" />
                       <span className="w-16 shrink-0 text-right font-mono-ui text-[0.78rem] text-glow-cyan">
                         {row.nQps}
                       </span>
@@ -95,15 +118,13 @@ export function BenchmarksSection() {
                       <span className="w-16 shrink-0 font-mono-ui text-[0.7rem] uppercase tracking-wider text-white/40">
                         Qdrant
                       </span>
-                      <div className="h-2 flex-1 rounded-full bg-white/5">
-                        <div className="h-2 rounded-full bg-white/35" style={{ width: `${qPct}%` }} />
-                      </div>
+                      <Bar pct={qPct} delay={rowDelay + 0.18} className="bg-white/35" />
                       <span className="w-16 shrink-0 text-right font-mono-ui text-[0.78rem] text-white/50">
                         {row.qQps}
                       </span>
                     </div>
                   </div>
-                </div>
+                </motion.div>
               );
             })}
           </div>
