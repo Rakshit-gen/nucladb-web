@@ -43,10 +43,6 @@ export function Nav() {
               {l.label}
             </Link>
           ))}
-          <a href={REPO_URL} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 transition-colors hover:text-white">
-            <GithubIcon size={14} />
-            GitHub
-          </a>
         </nav>
         <div className="flex items-center gap-3">
           <a
