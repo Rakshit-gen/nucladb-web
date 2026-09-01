@@ -44,7 +44,7 @@ export function ArchitectureSection() {
         <div className="relative mt-20 grid gap-0">
           {STAGES.map((stage, i) => (
             <Reveal key={stage.title} delay={i * 0.08}>
-              <div className={`relative flex gap-6 ${i < STAGES.length - 1 ? "pb-16" : ""}`}>
+              <div className={`relative flex gap-6 ${i < STAGES.length - 1 ? "pb-8" : ""}`}>
                 <div className="flex flex-col items-center">
                   <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-navy-600 bg-navy-900 font-mono-ui text-[0.72rem] text-glow-cyan">
                     {i + 1}
