@@ -1,0 +1,4 @@
+{
+  "title": "Docs",
+  "pages": ["index", "quickstart", "architecture", "api", "cli", "distributed", "design-decisions"]
+}

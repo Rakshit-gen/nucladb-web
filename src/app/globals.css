@@ -1,26 +1,135 @@
 @import "tailwindcss";
+@import "fumadocs-ui/css/preset.css";
+@import "fumadocs-ui/css/lib/default-colors.css";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --cream: #f4ead4;
+  --cream-deep: #ece0c2;
+  --cream-line: #ddcca2;
+
+  --ink: #1a2138;
+  --ink-soft: #4d5570;
+  --ink-faint: #7c8299;
+
+  --navy-950: #070b1a;
+  --navy-900: #0c1226;
+  --navy-800: #121b38;
+  --navy-700: #1b2748;
+  --navy-600: #283969;
+  --navy-line: #2c3b66;
+
+  --glow-cyan: #7fe3d4;
+  --glow-violet: #a78bfa;
+  --glow-amber: #f2c879;
+
+  --radius-card: 1rem;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+  --color-cream: var(--cream);
+  --color-cream-deep: var(--cream-deep);
+  --color-cream-line: var(--cream-line);
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-ink-faint: var(--ink-faint);
+
+  --color-navy-950: var(--navy-950);
+  --color-navy-900: var(--navy-900);
+  --color-navy-800: var(--navy-800);
+  --color-navy-700: var(--navy-700);
+  --color-navy-600: var(--navy-600);
+  --color-navy-line: var(--navy-line);
+
+  --color-glow-cyan: var(--glow-cyan);
+  --color-glow-violet: var(--glow-violet);
+  --color-glow-amber: var(--glow-amber);
+
+  --font-sans: var(--font-sans);
+  --font-serif: var(--font-serif);
+  --font-mono: var(--font-mono);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--cream);
+  color: var(--ink);
+  font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+}
+
+::selection {
+  background: var(--glow-cyan);
+  color: var(--navy-950);
+}
+
+.font-serif-display {
+  font-family: var(--font-serif), Georgia, serif;
+}
+
+.font-mono-ui {
+  font-family: var(--font-mono), ui-monospace, monospace;
+}
+
+/* Editorial section labels (small tracked uppercase, matches PRODUCT · API style refs) */
+.kicker {
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.kicker--on-dark {
+  color: rgba(230, 232, 245, 0.55);
+}
+
+/* Fumadocs theme, mapped onto the site's own navy/cream palette */
+@theme {
+  --color-fd-background: #f8f2e2;
+  --color-fd-foreground: var(--ink);
+  --color-fd-muted: var(--cream-deep);
+  --color-fd-muted-foreground: var(--ink-soft);
+  --color-fd-popover: #fffdf7;
+  --color-fd-popover-foreground: var(--ink);
+  --color-fd-card: #fffdf7;
+  --color-fd-card-foreground: var(--ink);
+  --color-fd-border: var(--cream-line);
+  --color-fd-primary: var(--navy-950);
+  --color-fd-primary-foreground: #fffdf7;
+  --color-fd-secondary: var(--cream-deep);
+  --color-fd-secondary-foreground: var(--ink);
+  --color-fd-accent: #e9dcb8;
+  --color-fd-accent-foreground: var(--ink);
+  --color-fd-ring: var(--glow-violet);
+  --color-fd-overlay: rgba(7, 11, 26, 0.35);
+}
+
+.dark {
+  --color-fd-background: var(--navy-950);
+  --color-fd-foreground: #e7e9f6;
+  --color-fd-muted: var(--navy-800);
+  --color-fd-muted-foreground: #9aa2c4;
+  --color-fd-popover: var(--navy-900);
+  --color-fd-popover-foreground: #e7e9f6;
+  --color-fd-card: var(--navy-900);
+  --color-fd-card-foreground: #e7e9f6;
+  --color-fd-border: var(--navy-line);
+  --color-fd-primary: var(--glow-cyan);
+  --color-fd-primary-foreground: var(--navy-950);
+  --color-fd-secondary: var(--navy-800);
+  --color-fd-secondary-foreground: #e7e9f6;
+  --color-fd-accent: var(--navy-700);
+  --color-fd-accent-foreground: #e7e9f6;
+  --color-fd-ring: var(--glow-cyan);
+  --color-fd-overlay: rgba(7, 11, 26, 0.55);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
 }

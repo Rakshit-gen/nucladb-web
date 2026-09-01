@@ -1,0 +1,61 @@
+---
+title: Quickstart
+description: Install the CLI and run a scripted demo against a real local server.
+---
+
+## One-liner install
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/Rakshit-gen/NuclaDB/main/install.sh | sh
+nucladb-cli quickstart
+```
+
+This installs both binaries (`go install` under the hood, no tagged releases or prebuilt binary pipeline) and starts a throwaway local `nucladbd`: a temp data directory, free local ports, `dim=4` and `metric=l2`. It runs a scripted insert/search demo against that instance, then leaves it running until you hit Ctrl+C. The CLI prints the address so you can keep using it in another terminal.
+
+<Callout type="info" title="Talking to the running instance">
+  `nucladb-cli` talks to `localhost:9090` by default. Override with the `NUCLADB_ADDR` env var.
+</Callout>
+
+## Manual insert / search
+
+Once `quickstart` is running (or any `nucladbd` instance is up):
+
+```sh
+export NUCLADB_ADDR=127.0.0.1:<port from quickstart's output>
+nucladb-cli insert -id=1 -vector=1,0,0,0 -meta=team=search
+nucladb-cli search -vector=1,0,0,0 -top-k=5
+```
+
+## Build from source instead
+
+```sh
+go build -o bin/nucladbd ./cmd/nucladbd
+go build -o bin/nucladb-cli ./cmd/nucladb-cli
+
+./bin/nucladbd -data-dir=./data -dim=4 -metric=l2 &
+
+export NUCLADB_ADDR=localhost:9090
+./bin/nucladb-cli insert -id=1 -vector=1,0,0,0 -meta=team=search
+./bin/nucladb-cli search -vector=1,0,0,0 -top-k=5
+```
+
+See [server flags](/docs/api#server-flags) for the full list of `nucladbd` options.
+
+## Python client
+
+```sh
+pip install ./clients/python
+```
+
+```python
+from nucladb import Client, DistanceMetric
+
+with Client("localhost:9090") as db:
+    db.insert("1", [1.0, 0.0, 0.0, 0.0], metadata={"team": "search"})
+    for match in db.search([1.0, 0.0, 0.0, 0.0], top_k=3, metric=DistanceMetric.L2):
+        print(match.id, match.score, match.metadata)
+```
+
+The package installs both the `nucladb` library and a `nucladb` CLI mirroring the Go one. Its smoke test builds the real Go `nucladbd` binary and runs it as a subprocess, so it's an actual end-to-end test, not a mocked one.
+
+Next: read the [architecture](/docs/architecture) overview, or go straight to the [CLI reference](/docs/cli) for multi-tenancy and filtering examples.

@@ -1,0 +1,27 @@
+---
+title: What product quantization cost
+description: 57.7% recall@10 at 16x compression, the near-worst-case configuration, measured on purpose.
+---
+
+Product quantization (PQ) trades recall for memory. Instead of storing full-precision vectors, it trains k-means++ codebooks per subspace and stores compressed codes. NuclaDB's implementation (`internal/index/pq`) uses asymmetric distance computation (ADC), so the query vector itself is never quantized, only the stored vectors are.
+
+## The number
+
+57.7% recall@10 at a fixed 16x memory reduction (M=16, Dim=64), from `internal/index/pq/pq_test.go`'s `TestIndexRecallVsExact`, which is deterministic across 5 runs with fixed seeds.
+
+<Callout type="warn" title="This is flat, unindexed PQ, on purpose">
+  No re-ranking, no IVF coarse quantizer. Production PQ setups typically add both. This configuration leaves them out deliberately, as a clean measurement of quantization error alone, not because it's the recommended way to run PQ in production.
+</Callout>
+
+## Why it isn't higher
+
+Two follow-ups explain the gap, and neither is implemented yet:
+
+- **No re-ranking**: a typical PQ pipeline re-scores the top candidates against their full-precision vectors before returning results, which recovers most of the lost recall. NuclaDB's PQ path doesn't do this yet.
+- **No IVF**: an inverted-file coarse quantizer narrows the search to a subset of the index before PQ scoring, which also tends to improve effective recall by avoiding compression error building up over the full dataset.
+
+## What's verified
+
+The distance computation itself is verified exact, so the recall loss traces to quantization error alone, not a scoring bug. That distinction matters: a lower number from a correct-but-lossy algorithm is one kind of tradeoff, while a lower number from a buggy comparator would just be a bug.
+
+For the other side of the compression-vs-accuracy space, see [HNSW ef tuning](/docs/design-decisions/hnsw-ef-tuning).

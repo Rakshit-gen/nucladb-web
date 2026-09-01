@@ -1,0 +1,31 @@
+---
+title: Introduction
+description: What NuclaDB is and how these docs are organized.
+---
+
+NuclaDB is a vector similarity search engine written from scratch in Go. That includes the HNSW graph, the crash-safe WAL, product quantization, multi-tenancy, and a Raft-coordinated distributed cluster with sharding and replication. All of it is implemented directly in this repo, not imported from another engine.
+
+<Callout type="info" title="Why this exists">
+  Most "vector database" side projects wrap an existing engine (Qdrant, Pinecone, pgvector) behind an app. NuclaDB is the other direction: it implements the kind of internals those engines are built from, and is benchmarked head-to-head against a real Qdrant instance instead of assumed to be competitive.
+</Callout>
+
+## What's in here
+
+<Cards>
+  <Card title="Quickstart" description="Install the CLI and run a scripted demo against a real local server." href="/docs/quickstart" />
+  <Card title="Architecture" description="The single-node request flow: gRPC/REST, then the engine, WAL, HNSW, optional PQ, and mmap snapshot." href="/docs/architecture" />
+  <Card title="API reference" description="REST/JSON and gRPC request and response shapes, taken from the real Go structs and .proto file." href="/docs/api" />
+  <Card title="CLI reference" description="Every nucladb-cli command, with real recorded output, including quota and tenant errors." href="/docs/cli" />
+  <Card title="Distributed cluster" description="Raft, consistent hashing, scatter-gather routing, async WAL replication, and health-checked failover." href="/docs/distributed" />
+  <Card title="Design decisions" description="Four writeups on what each major tradeoff cost, measured, not assumed." href="/docs/design-decisions/wal-then-snapshot" />
+</Cards>
+
+## Known limitations
+
+A few things are worth knowing up front, so nothing here reads as more finished than it is:
+
+- Build time is about 350x slower than Qdrant on the same dataset, because of fsync-per-write with no batching. See [WAL then snapshot](/docs/design-decisions/wal-then-snapshot).
+- Product quantization gets 57.7% recall@10 at 16x compression. This is the near-worst-case configuration (no re-ranking, no IVF), used as a clean measurement of quantization error alone. See [Product quantization cost](/docs/design-decisions/product-quantization-cost).
+- A 4-shard cluster runs 22 to 42% slower (in QPS) than single-node, from scatter-gather network hops. See [What Raft gave and cost](/docs/design-decisions/what-raft-gave-and-cost).
+
+The numbers in these docs come directly from committed benchmark output (`bench/results.md`, `bench/results-cluster.md`) or from the Go source itself. None of it is estimated.

@@ -1,0 +1,85 @@
+---
+title: CLI Reference
+description: Every nucladb-cli command, with real recorded output.
+---
+
+Commands: `ping`, `create-tenant`, `insert`, `batch-upsert`, `search`, `delete`, plus `quickstart` (scripted demo), shell completion, and a `-json` output flag.
+
+**Connecting**: talks to `localhost:9090` by default; override via the `NUCLADB_ADDR` env var.
+
+**Multi-tenancy**: every data command accepts `-tenant`; omitting it uses the reserved `default` tenant (no quota). A non-default tenant must be created first via `create-tenant`.
+
+## Install + quickstart
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/Rakshit-gen/NuclaDB/main/install.sh | sh
+nucladb-cli quickstart
+```
+
+Installs both binaries (`go install` under the hood) and starts a throwaway local `nucladbd`: a temp data dir, free local ports, `dim=4` and `metric=l2`. It then runs a scripted insert/search demo and leaves the server running until Ctrl+C.
+
+## Manual insert / search
+
+```sh
+export NUCLADB_ADDR=127.0.0.1:<port from quickstart's output>
+nucladb-cli insert -id=1 -vector=1,0,0,0 -meta=team=search
+nucladb-cli search -vector=1,0,0,0 -top-k=5
+```
+
+## Multi-tenancy + filtering
+
+A real recorded session, showing tenant isolation: the same id (`1`) exists independently under `default` and `acme`, with completely different data and no collision.
+
+```
+$ nucladb-cli create-tenant -id=acme -max-vectors=1000000
+created tenant "acme"
+
+$ nucladb-cli insert -id=1 -vector=1,0,0,0 -meta=team=search
+inserted id=1
+$ nucladb-cli insert -id=1 -tenant=acme -vector=1,0,0,0 -meta=who=acme
+inserted id=1
+
+$ nucladb-cli search -vector=1,0,0,0 -top-k=3
+1	score=0.000000	map[team:search]
+3	score=2.000000	map[]
+2	score=2.000000	map[team:infra]
+
+$ nucladb-cli search -vector=1,0,0,0 -top-k=3 -filter=team=infra
+2	score=2.000000	map[team:infra]
+
+$ nucladb-cli search -vector=1,0,0,0 -top-k=5 -tenant=acme
+1	score=0.000000	map[who:acme]
+```
+
+## Quota / rate-limit errors
+
+```
+$ nucladb-cli insert -id=4 -tenant=acme -vector=1,1,1,1
+nucladb-cli: rpc error: code = ResourceExhausted desc = engine: tenant storage quota exceeded
+
+$ nucladb-cli insert -id=5 -tenant=doesnotexist -vector=1,1,1,1
+nucladb-cli: rpc error: code = NotFound desc = engine: tenant not found
+```
+
+<Callout type="warn" title="Documented limitation">
+  Tenant quota (`-max-vectors`/`-max-qps`) lives in server process memory only. A `nucladbd` restart resets every tenant's quota to unlimited. Vector data itself is fully durable across restart (WAL and snapshot); only the quota policy is not yet persisted.
+</Callout>
+
+## Python client
+
+```sh
+pip install ./clients/python
+```
+
+Installs both the `nucladb` library and a `nucladb` CLI with the same commands:
+
+```python
+from nucladb import Client, DistanceMetric
+
+with Client("localhost:9090") as db:
+    db.insert("1", [1.0, 0.0, 0.0, 0.0], metadata={"team": "search"})
+    for match in db.search([1.0, 0.0, 0.0, 0.0], top_k=3, metric=DistanceMetric.L2):
+        print(match.id, match.score, match.metadata)
+```
+
+Its smoke test builds the real Go `nucladbd` binary and runs it as a subprocess, so it's an actual end-to-end test, not a mocked one.

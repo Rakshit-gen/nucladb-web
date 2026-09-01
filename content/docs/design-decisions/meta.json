@@ -1,0 +1,9 @@
+{
+  "title": "Design Decisions",
+  "pages": [
+    "wal-then-snapshot",
+    "hnsw-ef-tuning",
+    "product-quantization-cost",
+    "what-raft-gave-and-cost"
+  ]
+}

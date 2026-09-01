@@ -1,0 +1,147 @@
+---
+title: API Reference
+description: Exact REST/JSON and gRPC request/response shapes, extracted from gateway.go and nucladb.proto.
+---
+
+## REST / JSON
+
+Default port `:8080`.
+
+| Method | Path | Maps to |
+|---|---|---|
+| `POST` | `/v1/tenants` | CreateTenant |
+| `POST` | `/v1/vectors` | Insert |
+| `POST` | `/v1/vectors:batch` | BatchUpsert |
+| `DELETE` | `/v1/vectors/{id}` | Delete |
+| `POST` | `/v1/search` | Search |
+| `GET` | `/docs` | CLI documentation page (embedded static HTML) |
+
+`tenant_id` is a JSON body field on Insert/BatchUpsert/Search/CreateTenant, or a `?tenant_id=` query parameter on Delete (which has no body). Omitting it uses the reserved `default` tenant (no quota).
+
+### Create a tenant
+
+```jsonc
+// POST /v1/tenants
+// request
+{ "tenant_id": "acme", "max_vectors": 1000000, "max_qps": 100 }
+// response: empty object on success
+```
+
+### Insert a vector
+
+```jsonc
+// POST /v1/vectors
+// request
+{ "id": "1", "values": [1, 0, 0, 0], "metadata": {"team": "search"}, "tenant_id": "" }
+// response
+{ "id": "1" }
+```
+
+### Batch upsert
+
+```jsonc
+// POST /v1/vectors:batch
+// request
+{ "vectors": [
+  { "id": "10", "values": [1, 1, 0, 0] },
+  { "id": "11", "values": [1, 1, 1, 0], "metadata": {"team": "infra"} }
+] }
+// response
+{ "upserted": 2 }
+```
+
+### Delete
+
+```jsonc
+// DELETE /v1/vectors/{id}?tenant_id=acme
+// response
+{ "deleted": true }
+```
+
+### Search
+
+```jsonc
+// POST /v1/search
+// request
+{ "query": [1, 0, 0, 0], "top_k": 3, "ef_search": 0, "filters": {"team": "infra"}, "tenant_id": "" }
+// response
+{ "matches": [
+  { "id": "1", "score": 0, "metadata": {"team": "search"} },
+  { "id": "3", "score": 2 }
+] }
+```
+
+A real recorded example:
+
+```sh
+$ curl -s -X POST localhost:8080/v1/search -d '{"query":[1,0,0,0],"top_k":2}'
+{"matches":[{"id":"3","score":2},{"id":"2","score":2,"metadata":{"team":"infra"}}]}
+```
+
+<Callout type="warn" title="Errors">
+  `{"error": "<message>"}`, with the HTTP status mapped from the gRPC status code: `InvalidArgument` → 400, `NotFound` → 404, `ResourceExhausted` → 429, else 500.
+</Callout>
+
+## gRPC
+
+`proto/nucladb.proto`, default port `:9090`. Service `nucladb.v1.NuclaDB`:
+
+```proto
+rpc CreateTenant(CreateTenantRequest) returns (CreateTenantResponse);
+rpc Insert(InsertRequest) returns (InsertResponse);
+rpc BatchUpsert(BatchUpsertRequest) returns (BatchUpsertResponse);
+rpc Delete(DeleteRequest) returns (DeleteResponse);
+rpc Search(SearchRequest) returns (SearchResponse);
+```
+
+Key messages:
+
+```proto
+message TenantQuota {
+  int64 max_vectors = 1;  // 0 means unlimited
+  double max_qps = 2;     // 0 means unlimited
+}
+
+message Vector {
+  string id = 1;
+  repeated float values = 2;
+  map<string, string> metadata = 3;
+  string tenant_id = 4;
+}
+
+message SearchRequest {
+  repeated float query = 1;
+  int32 top_k = 2;
+  DistanceMetric metric = 3;
+  int32 ef_search = 4;
+  repeated MetadataFilter filters = 5;
+  string tenant_id = 6;
+}
+
+enum DistanceMetric {
+  UNSPECIFIED = 0;
+  COSINE = 1;
+  L2 = 2;
+  DOT = 3;
+}
+```
+
+The standard gRPC health-checking protocol (`grpc.health.v1.Health/Check`) is also served. This is what `nucladb-cli ping` and the cluster health checker both use.
+
+## Server flags
+
+`cmd/nucladbd/main.go`:
+
+| Flag | Default | Meaning |
+|---|---|---|
+| `-data-dir` | `./data` | directory holding WAL + snapshot files |
+| `-grpc-addr` | `:9090` | gRPC listen address |
+| `-http-addr` | `:8080` | REST/JSON + `/metrics` listen address |
+| `-dim` | `128` | fixed vector dimensionality for this database |
+| `-metric` | `cosine` | distance metric: cosine, l2, or dot |
+| `-m` | `16` | HNSW M: bidirectional links per node above layer 0 |
+| `-ef-construction` | `200` | HNSW build-time candidate list size |
+| `-snapshot-interval` | `5m` | how often to snapshot to disk |
+| `-metrics-interval` | `15s` | how often to refresh per-tenant usage gauges |
+
+For working examples against this API, see the [CLI reference](/docs/cli) and [quickstart](/docs/quickstart).

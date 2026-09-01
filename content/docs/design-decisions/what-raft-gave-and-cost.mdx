@@ -1,0 +1,28 @@
+---
+title: What Raft gave the system and what it cost
+description: Agreed-upon topology through faults, proven under chaos, and the linearizability window that async replication leaves open.
+---
+
+Raft governs cluster topology in NuclaDB: which nodes exist, which node leads each shard. It never touches the vector write path directly. That split is deliberate, since running every vector write through Raft consensus would be correct but much slower.
+
+## What it bought
+
+- **Agreed-upon shard topology through faults.** Every node rebuilds the same shard assignment independently from the same replicated Raft state, with no separate gossip or broadcast step and no risk of two nodes disagreeing about who owns a shard.
+- **Automatic failover without races.** Only the current Raft leader probes node liveness (`internal/cluster/health`), so nodes can't reach different verdicts about who's down. A fast per-shard failover promotes a replica after `FailureThreshold` missed probes, and a full node eviction and shard rebalance follows after `EvictThreshold`.
+- **Tested, not just designed.** `TestFullPartitionLosesQuorumThenHeals` drives a real toxiproxy network partition, not a process kill, and checks that the cluster loses quorum correctly and heals correctly once the partition clears.
+
+## What it cost
+
+Replication (`internal/cluster/replication`) is kept outside Raft: a shard leader streams its WAL to followers over a plain TCP connection, asynchronously, for write latency. That gives better speed, at the cost of a real failover window where an acknowledged write can be lost if the leader dies before a follower catches up on the stream.
+
+<Callout type="error" title="This is tested, not just asserted">
+  `TestFailoverLinearizability` uses the `porcupine` checker (the same linearizability-checking library Jepsen analyses use) and reports whichever outcome actually occurs under a real induced leader failover, instead of asserting a fixed result. Both a linearizable and a non-linearizable outcome are possible depending on timing, and the test reports either honestly.
+</Callout>
+
+`TestLinearizableUnderNormalOperation` runs the same checker in steady state, with no induced failover, as the baseline the failover test is measured against.
+
+## The throughput cost
+
+Scatter-gather query routing (every search fans out to every shard), plus the network hops of a distributed system, show up directly in QPS: a 4-shard cluster runs 22% (at ef=200) to 42% (at ef=10) slower than single-node on identical query workloads. See [the full cluster benchmark](/docs/distributed#cost-of-sharding-measured) for the complete table.
+
+That's the shape of the tradeoff: Raft-coordinated topology and automatic failover are tested under fault injection, and the write path's durability during failover is weaker than the single-node WAL's. That's the price of not routing every insert through consensus.

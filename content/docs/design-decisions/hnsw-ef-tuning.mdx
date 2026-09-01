@@ -1,0 +1,36 @@
+---
+title: "Tuning HNSW: what the recall/latency curve looks like"
+description: The full recall@10/QPS sweep on SIFT-small, and why efSearch is a per-query parameter.
+---
+
+`efSearch` controls how large a candidate list HNSW keeps while searching. A higher `ef` means better recall at the cost of latency. NuclaDB exposes it as a per-query parameter (`ef_search` in the API, `-ef` on the CLI) instead of a fixed server-wide setting. Here's the curve that decision is based on.
+
+## The sweep, against Qdrant on the same dataset
+
+10,000 base vectors, 100 queries, dim=128, SIFT-small:
+
+| ef | NuclaDB recall@10 | Qdrant recall@10 | NuclaDB QPS | Qdrant QPS | NuclaDB RSS | Qdrant RSS |
+|---|---|---|---|---|---|---|
+| 10 | 0.8960 | 1.0000 | 7432.4 | 3661.1 | 45.2 MB | 102.7 MB |
+| 20 | 0.9620 | 1.0000 | 6298.9 | 4522.6 | 45.2 MB | 102.7 MB |
+| 50 | 0.9970 | 1.0000 | 4932.9 | 5057.7 | 45.3 MB | 102.7 MB |
+| 100 | 1.0000 | 1.0000 | 3675.8 | 4951.5 | 45.4 MB | 102.7 MB |
+| 200 | 1.0000 | 1.0000 | 2367.5 | 5063.3 | 45.6 MB | 102.7 MB |
+
+<Callout type="info" title="Recall saturates by ef=50">
+  Going from ef=50 (0.997 recall) to ef=200 (1.000 recall) buys +0.3% recall for more than 2x the latency cost. Past ef=50, it's mostly diminishing returns.
+</Callout>
+
+## Where NuclaDB wins
+
+At low `ef` (10 to 20), NuclaDB beats Qdrant's QPS outright: 7432 vs. 3661 at ef=10. RSS stays under half of Qdrant's across every `ef` tested. The recall gap at low `ef` is real (0.896 vs. Qdrant's 1.000), but so is the throughput and memory advantage that comes with it.
+
+## A methodology bug the benchmark caught
+
+The first run of this benchmark showed Qdrant at a suspiciously perfect 1.0 recall at every `ef`, including ef=10, which was a red flag since exact recall at low `ef` isn't how HNSW behaves. The cause: Qdrant's default `full_scan_threshold` (10,000 KB) sits above this dataset's raw size (about 5,120 KB), so out of the box, Qdrant was silently doing exact brute-force search, not HNSW. That made the comparison exact-search-vs-HNSW instead of HNSW-vs-HNSW. It was fixed by forcing Qdrant's threshold down before re-running.
+
+## Why efSearch is per-query, not fixed
+
+There's no single right `ef`. It depends on the dataset and the recall/latency tradeoff a given query needs. A server-wide default would force every caller onto the same tradeoff, so it's exposed per-query instead (`ef_search: 0` falls back to a default), letting a caller trade recall for latency where it matters.
+
+For the compression side of this tradeoff, see [Product quantization cost](/docs/design-decisions/product-quantization-cost).

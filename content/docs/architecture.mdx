@@ -1,0 +1,49 @@
+---
+title: Architecture
+description: The single-node request flow, from gRPC/REST down to the mmap snapshot.
+---
+
+## Single-node request flow
+
+```
+gRPC (:9090) ──┐
+               ├─▶ internal/api/grpc + internal/api/gateway (REST/JSON facade)
+REST (:8080) ──┘
+               │
+               ▼
+   internal/engine.Store   (tenant routing, storage quotas, rate limits)
+               │  (one Engine opened lazily per tenant, on first access)
+               ▼
+   internal/engine.Engine
+               │
+   ┌───────────┴────────────┐
+   │  WAL (fsync every      │
+   │  write) ──▶ HNSW graph │──▶ optional internal/index/pq (product quantization)
+   │             (in-memory)│
+   └───────────┬────────────┘
+               ▼
+   internal/storage/segment (periodic mmap-backed snapshot)
+```
+
+Every write is WAL-logged and fsync'd before it touches the graph. Periodic snapshots let a restart skip replaying the WAL from empty. See [WAL then snapshot](/docs/design-decisions/wal-then-snapshot) for what that durability guarantee costs.
+
+## The pieces
+
+- **`internal/api/grpc` + `internal/api/gateway`**: the gRPC service and a hand-written REST/JSON translation layer over it. Not `grpc-gateway`, since vendoring the full googleapis proto tree isn't worth it for five routes.
+- **`internal/engine.Store`**: routes requests to the right tenant, and enforces storage quotas (max vectors) and rate limits (max QPS) before a request reaches the engine. One `Engine` is opened lazily per tenant, on first access.
+- **`internal/engine.Engine`**: owns one tenant's WAL, HNSW graph, and optional PQ index.
+- **`internal/index/hnsw`**: Malkov and Yashunin's Hierarchical Navigable Small World graph, from scratch. Coarse-grained RW-locked for correctness, verified under `go test -race`.
+- **`internal/index/pq`**: optional lossy compression, using k-means++-trained codebooks per subspace and asymmetric distance computation (ADC) so the query vector itself is never quantized.
+- **`internal/storage/wal`**: fsync-before-ack on every write, a custom binary record format with CRC32 checksums, and torn-write-safe replay.
+- **`internal/storage/segment`**: atomic (write-to-temp, rename-into-place) full-graph snapshots, loaded via mmap so a dataset larger than RAM can page in via the OS instead of failing.
+
+## Multi-tenancy
+
+Every tenant gets a fully isolated graph, WAL, and snapshot on disk, with its own storage quota (max vectors) and rate limit (max QPS), enforced before a request reaches the engine. The [CLI reference](/docs/cli#multi-tenancy--filtering) shows this in a real recorded session: the same vector id existing independently, with different data, under two different tenants.
+
+## Observability
+
+- **OpenTelemetry tracing**: every gRPC call gets a trace span. Exports to stdout by default, or to any OTLP/gRPC collector via `OTEL_EXPORTER_OTLP_ENDPOINT`.
+- **Prometheus metrics**: request-count/duration histograms (raw histograms, not pre-baked percentiles), plus per-tenant quota-usage gauges, served at `/metrics`.
+
+For the distributed layer built on top of this single-node engine, see [Distributed cluster](/docs/distributed).

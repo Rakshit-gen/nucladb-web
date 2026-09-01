@@ -1,0 +1,45 @@
+---
+title: Distributed Cluster
+description: Raft, consistent hashing, scatter-gather routing, async replication, and health-checked failover.
+---
+
+The distributed layer sits on top of the single-node [engine](/docs/architecture). Every shard is a full, independent copy of the single-node write path (WAL, then HNSW, then optional PQ, then mmap snapshot), coordinated across nodes by five packages.
+
+## The five packages
+
+- **`internal/cluster/raft`**: wraps `hashicorp/raft`, and governs cluster metadata only, meaning which nodes exist and which node leads each shard. It never touches a vector write directly.
+- **`internal/cluster/ring`**: consistent hashing over a fixed number of shards, chosen once at cluster creation. Each shard is a stable unit with its own Raft-coordinated leader and replica set. It doesn't hash vector ids directly onto nodes, since that would make shard identity (and therefore replication) a moving target.
+- **`internal/cluster/cluster.go`**: ties Raft and the ring together. Every node rebuilds the same shard assignment independently from the same replicated Raft state, with no separate gossip or broadcast step.
+- **`internal/cluster/router`**: scatter-gather query routing. `Insert`/`Delete` hash a vector id (FNV-1a) to exactly one shard. `Search` fans out to every shard concurrently and merges each shard's own top-K into one globally-ranked top-K.
+- **`internal/cluster/replication`**: streams a shard leader's WAL to follower replicas over a plain TCP connection, kept outside Raft for write latency. The wire protocol is minimal: a follower sends its sequence number, and the leader replies `'S'` (send a full snapshot, the follower is too far behind) or `'N'` (stream from the live WAL).
+- **`internal/cluster/health`**: only the current Raft leader probes node liveness, so different nodes can't reach different verdicts about who is down. There are two stages: a fast per-shard failover (promote a replica) after `FailureThreshold` missed probes, then a full node eviction and shard rebalance after `EvictThreshold`.
+
+<Callout type="info" title="The tradeoff">
+  Raft governs topology, not the vector write path itself. Running every vector write through Raft consensus would be correct but much slower. Replication is async instead (TCP WAL streaming), which gives better write latency at the cost of a measured failover window where an acknowledged write can be lost. See [What Raft gave and cost](/docs/design-decisions/what-raft-gave-and-cost) for how that's tested.
+</Callout>
+
+## Cost of sharding, measured
+
+10,000 base vectors, 100 queries, dim=128, SIFT-small, single-node vs. a 4-shard cluster:
+
+| Topology | Build time | Total RSS after build |
+|---|---|---|
+| Single-node | 45.386837375s | 44.1 MB |
+| 4-shard cluster | 36.97815325s | 119.4 MB |
+
+| ef | Single-node recall@10 | Cluster recall@10 | Single-node QPS | Cluster QPS |
+|---|---|---|---|---|
+| 10 | 0.9030 | 0.9630 | 5236.8 | 3092.0 |
+| 20 | 0.9600 | 0.9740 | 5867.2 | 3424.6 |
+| 50 | 0.9960 | 0.9850 | 4359.4 | 2616.0 |
+| 100 | 0.9990 | 0.9860 | 2951.8 | 2125.6 |
+| 200 | 0.9990 | 0.9860 | 2100.9 | 1635.9 |
+
+Cluster QPS drops 22% (at ef=200) to 42% (at ef=10) compared to single-node, from scatter-gather network hops and thinner per-shard candidate lists. Recall tracks closely: sharding by id doesn't remove vectors, it just changes which process holds them. At ef=10 the cluster's 0.963 even beats single-node's 0.903.
+
+## Testing the cluster
+
+- **Chaos tests**: `TestFullPartitionLosesQuorumThenHeals` (a real toxiproxy network partition, not a process kill), `TestRepeatedKillAndRestart`, `TestOpenFailsCleanlyOnUnwritableDataDir`.
+- **Jepsen-style linearizability testing**, using the `porcupine` checker (the same library Jepsen analyses use): `TestLinearizableUnderNormalOperation` and `TestFailoverLinearizability`. The failover test reports whichever outcome actually occurs under a real induced failover, rather than asserting one result, since both a linearizable and a non-linearizable outcome are possible depending on timing.
+
+More detail in [What Raft gave and cost](/docs/design-decisions/what-raft-gave-and-cost).
