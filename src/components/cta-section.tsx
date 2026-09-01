@@ -8,8 +8,8 @@ export function CtaSection() {
   return (
     <section className="relative bg-cream py-28">
       <div className="mx-auto max-w-6xl px-6">
-        <div className="grid gap-14 lg:grid-cols-2 lg:items-center">
-          <Reveal>
+        <div className="grid grid-cols-1 gap-14 lg:grid-cols-2 lg:items-center">
+          <Reveal className="min-w-0">
             <p className="kicker mb-4">Get started</p>
             <h2 className="text-[2rem] leading-tight font-semibold tracking-tight text-ink sm:text-[2.4rem]">
               One command. A real server. Your terminal.
@@ -39,7 +39,7 @@ export function CtaSection() {
             </div>
           </Reveal>
 
-          <Reveal delay={0.1}>
+          <Reveal delay={0.1} className="min-w-0">
             <TerminalBlock
               title="install.sh"
               copyText={INSTALL_CMD}

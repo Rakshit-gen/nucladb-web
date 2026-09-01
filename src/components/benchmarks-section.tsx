@@ -26,8 +26,8 @@ export function BenchmarksSection() {
           </p>
         </Reveal>
 
-        <div className="mt-14 grid gap-5 lg:grid-cols-3">
-          <Reveal className="lg:col-span-1">
+        <div className="mt-14 grid grid-cols-1 gap-5 lg:grid-cols-3">
+          <Reveal className="min-w-0 lg:col-span-1">
             <div className="h-full rounded-2xl border border-white/10 bg-white/[0.03] p-7">
               <p className="kicker kicker--on-dark mb-3">Build time</p>
               <p className="font-mono-ui text-3xl font-medium text-glow-amber">~350×</p>
@@ -41,7 +41,7 @@ export function BenchmarksSection() {
             </div>
           </Reveal>
 
-          <Reveal delay={0.06} className="lg:col-span-1">
+          <Reveal delay={0.06} className="min-w-0 lg:col-span-1">
             <div className="h-full rounded-2xl border border-white/10 bg-white/[0.03] p-7">
               <p className="kicker kicker--on-dark mb-3">Memory, at every ef</p>
               <p className="font-mono-ui text-3xl font-medium text-glow-cyan">&lt;½×</p>
@@ -52,7 +52,7 @@ export function BenchmarksSection() {
             </div>
           </Reveal>
 
-          <Reveal delay={0.12} className="lg:col-span-1">
+          <Reveal delay={0.12} className="min-w-0 lg:col-span-1">
             <div className="h-full rounded-2xl border border-white/10 bg-white/[0.03] p-7">
               <p className="kicker kicker--on-dark mb-3">Product quantization</p>
               <p className="font-mono-ui text-3xl font-medium text-glow-violet">57.7%</p>

@@ -14,8 +14,8 @@ export function ClusterSection() {
   return (
     <section className="relative bg-cream-deep py-28">
       <div className="mx-auto max-w-6xl px-6">
-        <div className="grid gap-14 lg:grid-cols-[1.1fr_1fr]">
-          <Reveal>
+        <div className="grid grid-cols-1 gap-14 lg:grid-cols-[1.1fr_1fr]">
+          <Reveal className="min-w-0">
             <p className="kicker mb-4">Distributed · Phase 2</p>
             <h2 className="text-[2rem] leading-tight font-semibold tracking-tight text-ink sm:text-[2.4rem]">
               A real cluster sits on top,{" "}
@@ -60,7 +60,7 @@ export function ClusterSection() {
             </Link>
           </Reveal>
 
-          <Reveal delay={0.1}>
+          <Reveal delay={0.1} className="min-w-0">
             <div className="rounded-2xl border border-cream-line bg-white/50 p-2">
               {LAYERS.map((l, i) => (
                 <div
