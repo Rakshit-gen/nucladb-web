@@ -22,6 +22,7 @@ export function TerminalBlock({
         </div>
         {copyText ? <CopyButton text={copyText} dark /> : null}
       </div>
+      <div className="relative">
       <pre className="overflow-x-auto px-4 py-4 font-mono-ui text-[0.82rem] leading-relaxed">
         {lines.map((line, i) => (
           <div key={i} className={line.muted ? "text-white/40" : "text-glow-cyan/90"}>
@@ -29,6 +30,8 @@ export function TerminalBlock({
           </div>
         ))}
       </pre>
+        <div className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-navy-950/90 to-transparent sm:hidden" />
+      </div>
     </div>
   );
 }
