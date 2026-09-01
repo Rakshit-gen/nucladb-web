@@ -69,8 +69,12 @@ export function BenchmarksSection() {
         </div>
 
         <Reveal delay={0.15}>
-          <div className="mt-6 overflow-x-auto rounded-2xl border border-white/10 bg-white/[0.03]">
-            <table className="w-full min-w-[640px] text-left font-mono-ui text-[0.82rem]">
+          <p className="mb-2 font-mono-ui text-[0.72rem] text-white/35 md:hidden">
+            Swipe to see every column &rarr;
+          </p>
+          <div className="relative">
+            <div className="overflow-x-auto rounded-2xl border border-white/10 bg-white/[0.03]">
+              <table className="w-full min-w-[640px] text-left font-mono-ui text-[0.82rem]">
               <thead>
                 <tr className="border-b border-white/10 text-white/40">
                   <th className="px-5 py-3.5 font-normal">ef</th>
@@ -93,7 +97,9 @@ export function BenchmarksSection() {
                   </tr>
                 ))}
               </tbody>
-            </table>
+              </table>
+            </div>
+            <div className="pointer-events-none absolute inset-y-0 right-0 w-10 rounded-r-2xl bg-gradient-to-l from-navy-950 to-transparent md:hidden" />
           </div>
           <p className="mt-3 text-[0.82rem] text-white/40">
             At low ef (10&ndash;20), NuclaDB&rsquo;s QPS actually beats Qdrant&rsquo;s outright:
