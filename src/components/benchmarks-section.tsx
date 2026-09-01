@@ -26,12 +26,12 @@ export function BenchmarksSection() {
           </p>
         </Reveal>
 
-        <div className="mt-14 grid grid-cols-1 gap-5 lg:grid-cols-3">
+        <div className="mt-16 grid grid-cols-1 gap-6 lg:grid-cols-3">
           <Reveal className="min-w-0 lg:col-span-1">
-            <div className="h-full rounded-2xl border border-white/10 bg-white/[0.03] p-7">
-              <p className="kicker kicker--on-dark mb-3">Build time</p>
+            <div className="h-full rounded-2xl border border-white/10 bg-white/[0.03] p-8">
+              <p className="kicker kicker--on-dark mb-4">Build time</p>
               <p className="font-mono-ui text-3xl font-medium text-glow-amber">~350×</p>
-              <p className="mt-2 text-[0.9rem] leading-relaxed text-white/60">
+              <p className="mt-3 text-[0.9rem] leading-relaxed text-white/60">
                 slower to build 10K vectors than Qdrant (43.9s vs 124ms): fsync-per-write
                 with no batching, the correct-but-slow default for a WAL that means it.
                 <Link href="/docs/design-decisions/wal-then-snapshot" className="ml-1 underline decoration-white/30 underline-offset-2 hover:text-white">
@@ -42,10 +42,10 @@ export function BenchmarksSection() {
           </Reveal>
 
           <Reveal delay={0.06} className="min-w-0 lg:col-span-1">
-            <div className="h-full rounded-2xl border border-white/10 bg-white/[0.03] p-7">
-              <p className="kicker kicker--on-dark mb-3">Memory, at every ef</p>
+            <div className="h-full rounded-2xl border border-white/10 bg-white/[0.03] p-8">
+              <p className="kicker kicker--on-dark mb-4">Memory, at every ef</p>
               <p className="font-mono-ui text-3xl font-medium text-glow-cyan">&lt;½×</p>
-              <p className="mt-2 text-[0.9rem] leading-relaxed text-white/60">
+              <p className="mt-3 text-[0.9rem] leading-relaxed text-white/60">
                 NuclaDB&rsquo;s RSS stays under half of Qdrant&rsquo;s across every efSearch value
                 tested (45.2–45.6 MB vs a flat 102.7 MB).
               </p>
@@ -53,10 +53,10 @@ export function BenchmarksSection() {
           </Reveal>
 
           <Reveal delay={0.12} className="min-w-0 lg:col-span-1">
-            <div className="h-full rounded-2xl border border-white/10 bg-white/[0.03] p-7">
-              <p className="kicker kicker--on-dark mb-3">Product quantization</p>
+            <div className="h-full rounded-2xl border border-white/10 bg-white/[0.03] p-8">
+              <p className="kicker kicker--on-dark mb-4">Product quantization</p>
               <p className="font-mono-ui text-3xl font-medium text-glow-violet">57.7%</p>
-              <p className="mt-2 text-[0.9rem] leading-relaxed text-white/60">
+              <p className="mt-3 text-[0.9rem] leading-relaxed text-white/60">
                 recall@10 at a fixed 16× memory reduction, the near-worst-case
                 config (no re-ranking, no IVF), measured as a clean read of
                 quantization error alone.
@@ -68,8 +68,8 @@ export function BenchmarksSection() {
           </Reveal>
         </div>
 
-        <Reveal delay={0.15}>
-          <p className="mb-2 font-mono-ui text-[0.72rem] text-white/35 md:hidden">
+        <Reveal delay={0.15} className="mt-16">
+          <p className="mb-3 font-mono-ui text-[0.72rem] text-white/35 md:hidden">
             Swipe to see every column &rarr;
           </p>
           <div className="relative">
@@ -101,14 +101,14 @@ export function BenchmarksSection() {
             </div>
             <div className="pointer-events-none absolute inset-y-0 right-0 w-10 rounded-r-2xl bg-gradient-to-l from-navy-950 to-transparent md:hidden" />
           </div>
-          <p className="mt-3 text-[0.82rem] text-white/40">
+          <p className="mt-4 text-[0.82rem] text-white/40">
             At low ef (10&ndash;20), NuclaDB&rsquo;s QPS actually beats Qdrant&rsquo;s outright:
             7432 vs 3661 at ef=10.
           </p>
         </Reveal>
 
-        <Reveal delay={0.2}>
-          <div className="mt-8 rounded-2xl border border-white/10 bg-gradient-to-br from-glow-violet/[0.08] to-transparent p-6">
+        <Reveal delay={0.2} className="mt-10">
+          <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-glow-violet/[0.08] to-transparent p-7">
             <p className="text-[0.9rem] leading-relaxed text-white/70">
               <span className="font-semibold text-white">The benchmark caught a real bug in itself.</span>{" "}
               Qdrant&rsquo;s default <code className="font-mono-ui text-glow-amber">full_scan_threshold</code> (10,000 KB)

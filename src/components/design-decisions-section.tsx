@@ -34,23 +34,23 @@ export function DesignDecisionsSection() {
     <section className="relative bg-cream py-28">
       <div className="mx-auto max-w-6xl px-6">
         <Reveal>
-          <p className="kicker mb-4">Engineering notes</p>
+          <p className="kicker mb-5">Engineering notes</p>
           <h2 className="max-w-2xl text-[2rem] leading-tight font-semibold tracking-tight text-ink sm:text-[2.4rem]">
             Every design decision, with its{" "}
             <span className="font-serif-display italic font-normal">measured</span> cost.
           </h2>
-          <p className="mt-5 max-w-2xl text-[1.05rem] leading-relaxed text-ink-soft">
+          <p className="mt-6 max-w-2xl text-[1.05rem] leading-relaxed text-ink-soft">
             Four write-ups on tradeoffs we made and what they actually cost,
             measured rather than assumed.
           </p>
         </Reveal>
 
-        <div className="mt-14 grid grid-cols-1 gap-5 md:grid-cols-2">
+        <div className="mt-16 grid grid-cols-1 gap-6 md:grid-cols-2">
           {WRITEUPS.map((w, i) => (
             <Reveal key={w.slug} delay={i * 0.06}>
               <Link
                 href={`/docs/design-decisions/${w.slug}`}
-                className="group flex h-full flex-col rounded-2xl border border-cream-line bg-white/50 p-7 transition-colors hover:bg-white/90"
+                className="group flex h-full flex-col rounded-2xl border border-cream-line bg-white/50 p-8 transition-colors hover:bg-white/90"
               >
                 <div className="flex items-start justify-between">
                   <span className="font-mono-ui text-[0.78rem] text-ink-faint">{w.n}</span>

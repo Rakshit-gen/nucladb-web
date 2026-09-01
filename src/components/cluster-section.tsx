@@ -16,12 +16,12 @@ export function ClusterSection() {
       <div className="mx-auto max-w-6xl px-6">
         <div className="grid grid-cols-1 gap-14 lg:grid-cols-[1.1fr_1fr]">
           <Reveal className="min-w-0">
-            <p className="kicker mb-4">Distributed · Phase 2</p>
+            <p className="kicker mb-5">Distributed · Phase 2</p>
             <h2 className="text-[2rem] leading-tight font-semibold tracking-tight text-ink sm:text-[2.4rem]">
               A real cluster sits on top,{" "}
               <span className="font-serif-display italic font-normal">benchmarked honestly.</span>
             </h2>
-            <p className="mt-5 text-[1.02rem] leading-relaxed text-ink-soft">
+            <p className="mt-6 text-[1.02rem] leading-relaxed text-ink-soft">
               Raft governs topology, never the write path itself, since running
               every vector write through consensus would be correct but
               dramatically slower. Replication is deliberately async, which buys
@@ -65,7 +65,7 @@ export function ClusterSection() {
               {LAYERS.map((l, i) => (
                 <div
                   key={l.name}
-                  className={`flex gap-4 p-5 ${i < LAYERS.length - 1 ? "border-b border-cream-line" : ""}`}
+                  className={`flex gap-4 p-6 ${i < LAYERS.length - 1 ? "border-b border-cream-line" : ""}`}
                 >
                   <span className="font-mono-ui text-[0.8rem] text-glow-violet">/{l.name}</span>
                   <p className="text-[0.86rem] leading-relaxed text-ink-soft">{l.body}</p>
