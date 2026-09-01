@@ -1,31 +1,54 @@
+"use client";
+
 import Link from "next/link";
+import { motion, type Variants } from "framer-motion";
 import { ArrowRight } from "lucide-react";
 import { HeroField } from "./hero-field";
 import { TerminalBlock } from "./terminal-block";
 import { INSTALL_CMD } from "@/lib/site";
+
+const container: Variants = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.1, delayChildren: 0.1 } },
+};
+
+const item: Variants = {
+  hidden: { opacity: 0, y: 16 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.7, ease: [0.16, 1, 0.3, 1] } },
+};
 
 export function Hero() {
   return (
     <section className="relative flex min-h-[100svh] flex-col overflow-hidden bg-navy-950 pt-28 pb-16">
       <HeroField />
 
-      <div className="relative z-10 mx-auto flex w-full max-w-6xl flex-1 flex-col justify-center px-6">
-        <p className="kicker kicker--on-dark mb-5">Vector search engine · written from scratch in Go</p>
-        <h1 className="max-w-3xl text-[2.6rem] leading-[1.08] font-semibold tracking-tight text-white sm:text-6xl">
+      <motion.div
+        className="relative z-10 mx-auto flex w-full max-w-6xl flex-1 flex-col justify-center px-6"
+        variants={container}
+        initial="hidden"
+        animate="show"
+      >
+        <motion.p variants={item} className="kicker kicker--on-dark mb-5">
+          Vector search engine · written from scratch in Go
+        </motion.p>
+        <motion.h1
+          variants={item}
+          className="max-w-3xl text-[2.6rem] leading-[1.08] font-semibold tracking-tight text-white sm:text-6xl"
+        >
           Not a wrapper around Qdrant.
           <br />
           <span className="font-serif-display italic font-normal text-glow-cyan">
             The thing Qdrant is made of.
           </span>
-        </h1>
-        <p className="mt-6 max-w-xl text-[1.05rem] leading-relaxed text-white/60">
+        </motion.h1>
+        <motion.p variants={item} className="mt-6 max-w-xl text-[1.05rem] leading-relaxed text-white/60">
           HNSW indexing, product quantization, a crash-safe WAL, mmap snapshots,
           multi-tenancy, and a Raft-coordinated distributed cluster: implemented
           and tested directly, then benchmarked head-to-head against a real Qdrant
           instance. Including where NuclaDB loses.
-        </p>
+        </motion.p>
 
-        <div className="mt-9 flex flex-wrap items-center gap-4">
+        <motion.div variants={item} className="mt-9 flex flex-wrap items-center gap-4">
           <Link
             href="/docs"
             className="group flex items-center gap-2 rounded-full bg-white px-5 py-3 text-[0.85rem] font-medium text-navy-950 transition-transform hover:-translate-y-0.5"
@@ -39,9 +62,9 @@ export function Hero() {
           >
             See the benchmarks
           </a>
-        </div>
+        </motion.div>
 
-        <div className="mt-12 max-w-xl">
+        <motion.div variants={item} className="mt-12 max-w-xl">
           <TerminalBlock
             title="quickstart"
             copyText={`${INSTALL_CMD}\nnucladb-cli quickstart`}
@@ -53,8 +76,8 @@ export function Hero() {
               { text: "  → keep using it: NUCLADB_ADDR=127.0.0.1:53211", muted: true },
             ]}
           />
-        </div>
-      </div>
+        </motion.div>
+      </motion.div>
 
       <div className="relative z-10 mx-auto mt-10 flex items-center gap-2 text-white/30">
         <span className="font-mono-ui text-[0.68rem] uppercase tracking-[0.2em]">Scroll</span>
