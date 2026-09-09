@@ -37,11 +37,9 @@ export function BenchmarksSection() {
           <h2 className="max-w-2xl text-[2rem] leading-tight font-semibold tracking-tight sm:text-[2.4rem]">
             We measured our own weaknesses too.
           </h2>
-          <p className="mt-5 max-w-2xl text-[1.05rem] leading-relaxed text-white/60">
-            A real, reproducible, committed head-to-head against an actual Qdrant
-            binary: 10,000 base vectors, 100 queries, dim=128, SIFT-small,
-            measured over each system&rsquo;s real network API. Not synthetic, not
-            an in-process shortcut.
+          <p className="mt-5 max-w-md text-[0.98rem] leading-relaxed text-white/60">
+            A committed head-to-head against a real Qdrant binary. SIFT-small,
+            10K vectors, measured over each system&rsquo;s network API.
           </p>
         </Reveal>
 
@@ -49,12 +47,11 @@ export function BenchmarksSection() {
           <Reveal className="min-w-0 lg:col-span-1">
             <div className="h-full rounded-2xl border border-white/10 bg-white/[0.03] p-8">
               <p className="kicker kicker--on-dark mb-4">Build time</p>
-              <p className="font-mono-ui text-3xl font-medium text-glow-amber">~350×</p>
+              <p className="font-mono-ui text-5xl font-medium text-glow-amber">~350×</p>
               <p className="mt-3 text-[0.9rem] leading-relaxed text-white/60">
-                slower to build 10K vectors than Qdrant (43.9s vs 124ms): fsync-per-write
-                with no batching, the correct-but-slow default for a WAL that means it.
+                slower to build 10K vectors (43.9s vs 124ms), from fsync-per-write with no batching.
                 <Link href="/docs/design-decisions/wal-then-snapshot" className="ml-1 underline decoration-white/30 underline-offset-2 hover:text-white">
-                  Why, in depth →
+                  Why →
                 </Link>
               </p>
             </div>
@@ -63,10 +60,10 @@ export function BenchmarksSection() {
           <Reveal delay={0.06} className="min-w-0 lg:col-span-1">
             <div className="h-full rounded-2xl border border-white/10 bg-white/[0.03] p-8">
               <p className="kicker kicker--on-dark mb-4">Memory, at every ef</p>
-              <p className="font-mono-ui text-3xl font-medium text-glow-cyan">&lt;½×</p>
+              <p className="font-mono-ui text-5xl font-medium text-glow-cyan">&lt;½×</p>
               <p className="mt-3 text-[0.9rem] leading-relaxed text-white/60">
-                NuclaDB&rsquo;s RSS stays under half of Qdrant&rsquo;s across every efSearch value
-                tested (45.2–45.6 MB vs a flat 102.7 MB).
+                RSS stays under half of Qdrant&rsquo;s at every efSearch tested
+                (45 MB vs a flat 103 MB).
               </p>
             </div>
           </Reveal>
@@ -74,13 +71,11 @@ export function BenchmarksSection() {
           <Reveal delay={0.12} className="min-w-0 lg:col-span-1">
             <div className="h-full rounded-2xl border border-white/10 bg-white/[0.03] p-8">
               <p className="kicker kicker--on-dark mb-4">Product quantization</p>
-              <p className="font-mono-ui text-3xl font-medium text-glow-violet">57.7%</p>
+              <p className="font-mono-ui text-5xl font-medium text-glow-violet">57.7%</p>
               <p className="mt-3 text-[0.9rem] leading-relaxed text-white/60">
-                recall@10 at a fixed 16× memory reduction, the near-worst-case
-                config (no re-ranking, no IVF), measured as a clean read of
-                quantization error alone.
+                recall@10 at 16× compression, in the worst-case config with no re-ranking or IVF.
                 <Link href="/docs/design-decisions/product-quantization-cost" className="ml-1 underline decoration-white/30 underline-offset-2 hover:text-white">
-                  Why, in depth →
+                  Why →
                 </Link>
               </p>
             </div>
@@ -129,8 +124,7 @@ export function BenchmarksSection() {
             })}
           </div>
           <p className="mt-4 text-[0.82rem] text-white/40">
-            At low ef (10&ndash;20), NuclaDB&rsquo;s QPS actually beats Qdrant&rsquo;s outright:
-            7432 vs 3661 at ef=10.
+            At low ef, NuclaDB&rsquo;s QPS beats Qdrant outright — 7432 vs 3661 at ef=10.
           </p>
 
           <details className="group mt-4">
@@ -172,12 +166,10 @@ export function BenchmarksSection() {
         <Reveal delay={0.2} className="mt-10">
           <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-glow-violet/[0.08] to-transparent p-7">
             <p className="text-[0.9rem] leading-relaxed text-white/70">
-              <span className="font-semibold text-white">The benchmark caught a real bug in itself.</span>{" "}
-              Qdrant&rsquo;s default <code className="font-mono-ui text-glow-amber">full_scan_threshold</code> (10,000 KB)
-              sits above this dataset&rsquo;s raw size (~5,120 KB): an out-of-the-box run would
-              have silently compared HNSW against exact search, not HNSW against HNSW.
-              Caught by noticing suspiciously perfect recall at every ef, then fixed by
-              forcing the threshold down.
+              <span className="font-semibold text-white">The benchmark caught a bug in itself.</span>{" "}
+              Qdrant&rsquo;s default <code className="font-mono-ui text-glow-amber">full_scan_threshold</code> sits
+              above this dataset&rsquo;s size, so an out-of-the-box run compares HNSW against exact
+              search. Caught via suspiciously perfect recall, fixed by forcing the threshold down.
             </p>
           </div>
         </Reveal>

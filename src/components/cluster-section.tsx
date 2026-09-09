@@ -10,11 +10,11 @@ const STATS = [
 ];
 
 const LAYERS = [
-  { name: "raft", icon: Network, body: "Wraps hashicorp/raft to govern cluster metadata only: which nodes exist, which node leads each shard. Never touches a vector write directly." },
-  { name: "ring", icon: Hash, body: "Consistent hashing over a fixed shard count chosen at cluster creation, so shard identity, and therefore replication, is never a moving target." },
-  { name: "router", icon: Waypoints, body: "Insert/Delete hash a vector id (FNV-1a) to one shard. Search fans out to every shard concurrently and merges each shard's top-K into one ranked result." },
-  { name: "replication", icon: RefreshCw, body: "A shard leader streams its WAL to followers over plain TCP, deliberately outside Raft, for write latency, with automatic full-snapshot catch-up." },
-  { name: "health", icon: Activity, body: "Only the current Raft leader probes liveness. Fast per-shard failover after a few missed probes; full eviction and rebalance after more." },
+  { name: "raft", icon: Network, body: "Wraps hashicorp/raft for cluster metadata only — which nodes exist, which leads each shard." },
+  { name: "ring", icon: Hash, body: "Consistent hashing over a fixed shard count, so shard identity is never a moving target." },
+  { name: "router", icon: Waypoints, body: "Writes hash to one shard; search fans out to all shards and merges each top-K." },
+  { name: "replication", icon: RefreshCw, body: "Shard leader streams its WAL to followers over plain TCP, outside Raft, for write latency." },
+  { name: "health", icon: Activity, body: "The Raft leader probes liveness — fast per-shard failover, then eviction and rebalance." },
 ];
 
 export function ClusterSection() {
@@ -28,15 +28,11 @@ export function ClusterSection() {
               A real cluster sits on top,{" "}
               <span className="font-serif-display italic font-normal">benchmarked honestly.</span>
             </h2>
-            <p className="mt-6 text-[1.02rem] leading-relaxed text-ink-soft">
-              Raft governs topology, never the write path itself, since running
-              every vector write through consensus would be correct but
-              dramatically slower. Replication is deliberately async, which buys
-              latency at the cost of a real, measured failover window where an
-              acknowledged write can be lost. Checked with Jepsen-style testing
-              using the real{" "}
-              <code className="font-mono-ui text-[0.85em]">porcupine</code> checker,
-              not just asserted.
+            <p className="mt-6 max-w-md text-[0.98rem] leading-relaxed text-ink-soft">
+              Raft governs topology, never the write path. Replication is async,
+              which is faster but opens a measured failover window where an
+              acknowledged write can be lost. We checked that with{" "}
+              <code className="font-mono-ui text-[0.85em]">porcupine</code> rather than assuming it.
             </p>
 
             <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-4">

@@ -14,11 +14,10 @@ export function CtaSection() {
             <h2 className="text-[2rem] leading-tight font-semibold tracking-tight text-ink sm:text-[2.4rem]">
               One command. A real server. Your terminal.
             </h2>
-            <p className="mt-5 max-w-md text-[1.02rem] leading-relaxed text-ink-soft">
+            <p className="mt-5 max-w-md text-[0.98rem] leading-relaxed text-ink-soft">
               <code className="font-mono-ui text-[0.85em]">install.sh</code> installs
-              both binaries and <code className="font-mono-ui text-[0.85em]">quickstart</code>{" "}
-              spins up a throwaway local server, runs a scripted demo, then leaves
-              it running so you can keep poking at it.
+              both binaries; <code className="font-mono-ui text-[0.85em]">quickstart</code>{" "}
+              spins up a local server, runs a demo, and leaves it running.
             </p>
             <div className="mt-8 flex flex-wrap gap-4">
               <Link

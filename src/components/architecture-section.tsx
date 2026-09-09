@@ -4,25 +4,25 @@ const STAGES = [
   {
     label: "Client",
     title: "gRPC :9090 · REST :8080",
-    body: "REST is a hand-written JSON layer over gRPC, not grpc-gateway: not worth vendoring the full googleapis proto tree for five routes.",
+    body: "REST is a hand-written JSON layer over gRPC — no grpc-gateway, no googleapis proto tree.",
     code: "internal/api/grpc · internal/api/gateway",
   },
   {
     label: "Routing",
     title: "engine.Store",
-    body: "Tenant routing, storage quotas, and QPS limits are enforced here before a request reaches an engine, opened lazily per tenant.",
+    body: "Tenant routing, storage quotas, and QPS limits, enforced before a request reaches an engine.",
     code: "internal/engine.Store",
   },
   {
     label: "Write path",
     title: "WAL → HNSW graph → PQ (optional)",
-    body: "Every write fsyncs to the WAL before ack, then applies to the in-memory HNSW graph, with optional PQ compression after.",
+    body: "Every write fsyncs to the WAL before ack, then applies to the in-memory graph.",
     code: "internal/storage/wal · internal/index/hnsw · internal/index/pq",
   },
   {
     label: "Durability",
     title: "mmap-backed snapshot",
-    body: "Atomic write-to-temp, rename-into-place snapshots let a restart skip WAL replay, and let a dataset larger than RAM page in via the OS.",
+    body: "Atomic write-and-rename snapshots let a restart skip WAL replay and page in from disk.",
     code: "internal/storage/segment",
   },
 ];

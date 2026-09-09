@@ -1,54 +1,44 @@
-"use client";
-
 import Link from "next/link";
-import { motion, type Variants } from "framer-motion";
 import { ArrowRight } from "lucide-react";
-import { HeroField } from "./hero-field";
+import { HeroGrid } from "./hero-grid";
 import { TerminalBlock } from "./terminal-block";
 import { INSTALL_CMD } from "@/lib/site";
-
-const container: Variants = {
-  hidden: {},
-  show: { transition: { staggerChildren: 0.1, delayChildren: 0.1 } },
-};
-
-const item: Variants = {
-  hidden: { opacity: 0, y: 16 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.7, ease: [0.16, 1, 0.3, 1] } },
-};
 
 export function Hero() {
   return (
     <section className="relative flex min-h-[100svh] flex-col overflow-hidden bg-navy-950 pt-28 pb-16">
-      <HeroField />
+      <div className="absolute inset-0 overflow-hidden bg-black" aria-hidden="true">
+        <div
+          className="absolute inset-0"
+          style={{
+            background:
+              "radial-gradient(50% 50% at 78% 34%, rgba(139,110,246,0.12), transparent 70%), radial-gradient(55% 55% at 66% 64%, rgba(90,214,204,0.07), transparent 72%), #000000",
+          }}
+        />
+        <div className="absolute inset-y-0 right-[-30%] w-[100%] opacity-80 sm:right-[-12%] sm:w-[74%] sm:opacity-95 lg:right-[-4%] lg:w-[62%] lg:opacity-100">
+          <HeroGrid />
+        </div>
+        <div className="absolute inset-0 bg-gradient-to-r from-black via-black/70 to-transparent lg:via-black/35" />
+      </div>
 
-      <motion.div
-        className="relative z-10 mx-auto flex w-full max-w-6xl flex-1 flex-col justify-center px-6"
-        variants={container}
-        initial="hidden"
-        animate="show"
-      >
-        <motion.p variants={item} className="kicker kicker--on-dark mb-5">
-          Vector search engine · written from scratch in Go
-        </motion.p>
-        <motion.h1
-          variants={item}
-          className="max-w-3xl text-[2.6rem] leading-[1.08] font-semibold tracking-tight text-white sm:text-6xl"
-        >
-          Not a wrapper around Qdrant.
+      <div className="relative z-10 mx-auto flex w-full max-w-6xl flex-1 flex-col justify-center px-6">
+        <p className="kicker kicker--on-dark mb-5">
+          Open-source vector database · written from scratch in Go
+        </p>
+        <h1 className="max-w-2xl text-[2.9rem] leading-[1.04] font-semibold tracking-tight text-white sm:text-[4.25rem]">
+          Search by meaning,
           <br />
           <span className="font-serif-display italic font-normal text-glow-cyan">
-            The thing Qdrant is made of.
+            built from the index up.
           </span>
-        </motion.h1>
-        <motion.p variants={item} className="mt-6 max-w-xl text-[1.05rem] leading-relaxed text-white/60">
-          HNSW indexing, product quantization, a crash-safe WAL, mmap snapshots,
-          multi-tenancy, and a Raft-coordinated distributed cluster: implemented
-          and tested directly, then benchmarked head-to-head against a real Qdrant
-          instance. Including where NuclaDB loses.
-        </motion.p>
+        </h1>
+        <p className="mt-6 max-w-md text-[0.98rem] leading-relaxed text-white/70">
+          A vector database finds the closest matches to an embedding, which is
+          what powers semantic search and RAG. Most wrap an existing engine;
+          NuclaDB is the engine.
+        </p>
 
-        <motion.div variants={item} className="mt-9 flex flex-wrap items-center gap-4">
+        <div className="mt-9 flex flex-wrap items-center gap-4">
           <Link
             href="/docs"
             className="group flex items-center gap-2 rounded-full bg-white px-5 py-3 text-[0.85rem] font-medium text-navy-950 transition-transform hover:-translate-y-0.5"
@@ -62,9 +52,21 @@ export function Hero() {
           >
             See the benchmarks
           </a>
-        </motion.div>
+        </div>
 
-        <motion.div variants={item} className="mt-12 max-w-xl">
+        <div className="mt-9 flex flex-wrap items-center gap-x-8 gap-y-2 border-t border-white/10 pt-6 font-mono-ui text-[0.78rem] text-white/40">
+          <span>
+            <span className="text-white/80">45 MB</span> memory
+          </span>
+          <span>
+            <span className="text-white/80">7,400</span> searches/sec
+          </span>
+          <span>
+            <span className="text-white/80">zero</span> vendored engines
+          </span>
+        </div>
+
+        <div className="mt-10 max-w-xl">
           <TerminalBlock
             title="quickstart"
             copyText={`${INSTALL_CMD}\nnucladb-cli quickstart`}
@@ -76,8 +78,8 @@ export function Hero() {
               { text: "  → keep using it: NUCLADB_ADDR=127.0.0.1:53211", muted: true },
             ]}
           />
-        </motion.div>
-      </motion.div>
+        </div>
+      </div>
 
       <div className="relative z-10 mx-auto mt-10 flex items-center gap-2 text-white/30">
         <span className="font-mono-ui text-[0.68rem] uppercase tracking-[0.2em]">Scroll</span>

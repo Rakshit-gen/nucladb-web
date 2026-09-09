@@ -132,12 +132,11 @@ export function PlaygroundSection() {
           <h2 className="max-w-2xl text-[2rem] leading-tight font-semibold tracking-tight sm:text-[2.4rem]">
             This is the real engine, compiled to WebAssembly.
           </h2>
-          <p className="mt-5 max-w-2xl text-[1.05rem] leading-relaxed text-white/60">
-            Not a mock. <code className="font-mono-ui text-[0.85em] text-glow-cyan">internal/index/hnsw</code>{" "}
-            is the exact package the server runs, compiled unmodified to WASM and
-            executing right here, in this tab. Insert random vectors, then search,
-            and see the real graph timing and recall against a brute-force check
-            computed alongside it.
+          <p className="mt-5 max-w-lg text-[0.98rem] leading-relaxed text-white/60">
+            This isn&rsquo;t a mock. <code className="font-mono-ui text-[0.85em] text-glow-cyan">internal/index/hnsw</code>{" "}
+            is the same package the server runs, compiled to WASM and running in
+            this tab. Insert vectors, run a search, and compare the timing and
+            recall against a live brute-force check.
           </p>
         </Reveal>
 
@@ -249,8 +248,8 @@ export function PlaygroundSection() {
 
         <Reveal delay={0.14}>
           <p className="mt-4 text-[0.8rem] text-white/35">
-            The query vector and its ground truth are generated fresh on every search,
-            so recall reflects this exact corpus, not a cached number.{" "}
+            Query vector and ground truth are generated fresh each search, so recall
+            reflects this exact corpus.{" "}
             <a
               href={`${REPO_URL}/blob/main/cmd/wasm/main.go`}
               target="_blank"

@@ -39,9 +39,8 @@ export function DesignDecisionsSection() {
             Every design decision, with its{" "}
             <span className="font-serif-display italic font-normal">measured</span> cost.
           </h2>
-          <p className="mt-6 max-w-2xl text-[1.05rem] leading-relaxed text-ink-soft">
-            Four write-ups on tradeoffs we made and what they actually cost,
-            measured rather than assumed.
+          <p className="mt-6 max-w-md text-[0.98rem] leading-relaxed text-ink-soft">
+            Four write-ups on tradeoffs we made and what they cost.
           </p>
         </Reveal>
 
