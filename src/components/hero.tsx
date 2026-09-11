@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
-import { HeroGrid } from "./hero-grid";
+import { HeroDots } from "./hero-dots";
 import { TerminalBlock } from "./terminal-block";
 import { INSTALL_CMD } from "@/lib/site";
 
@@ -8,16 +8,7 @@ export function Hero() {
   return (
     <section className="relative flex min-h-[100svh] flex-col overflow-hidden bg-navy-950 pt-28 pb-16">
       <div className="absolute inset-0 overflow-hidden bg-black" aria-hidden="true">
-        <div
-          className="absolute inset-0"
-          style={{
-            background:
-              "radial-gradient(50% 50% at 78% 34%, rgba(139,110,246,0.12), transparent 70%), radial-gradient(55% 55% at 66% 64%, rgba(90,214,204,0.07), transparent 72%), #000000",
-          }}
-        />
-        <div className="absolute inset-y-0 right-[-30%] w-[100%] opacity-80 sm:right-[-12%] sm:w-[74%] sm:opacity-95 lg:right-[-4%] lg:w-[62%] lg:opacity-100">
-          <HeroGrid />
-        </div>
+        <HeroDots />
         <div className="absolute inset-0 bg-gradient-to-r from-black via-black/70 to-transparent lg:via-black/35" />
       </div>
 
