@@ -4,20 +4,20 @@ const STAGES = [
   {
     label: "Client",
     title: "gRPC :9090 · REST :8080",
-    body: "REST is a hand-written JSON layer over gRPC — no grpc-gateway, no googleapis proto tree.",
+    body: "REST is a hand-written JSON layer over gRPC: no grpc-gateway, no googleapis proto tree.",
     code: "internal/api/grpc · internal/api/gateway",
   },
   {
     label: "Routing",
     title: "engine.Store",
-    body: "Tenant routing, storage quotas, and QPS limits, enforced before a request reaches an engine.",
+    body: "API-key scope, tenant routing, storage quotas, and QPS limits, enforced before a request reaches an engine.",
     code: "internal/engine.Store",
   },
   {
     label: "Write path",
-    title: "WAL → HNSW graph → PQ (optional)",
-    body: "Every write fsyncs to the WAL before ack, then applies to the in-memory graph.",
-    code: "internal/storage/wal · internal/index/hnsw · internal/index/pq",
+    title: "WAL → HNSW graph",
+    body: "Every write fsyncs to the WAL before ack (one fsync per batch), then applies to the in-memory graph.",
+    code: "internal/storage/wal · internal/index/hnsw",
   },
   {
     label: "Durability",

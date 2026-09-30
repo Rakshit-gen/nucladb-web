@@ -4,17 +4,17 @@ import { Reveal } from "./reveal";
 
 const STATS = [
   { value: "4", label: "shards benchmarked" },
-  { value: "22–42%", label: "QPS cost vs. single-node" },
-  { value: "0.963", label: "recall@10, ef=10, 4-shard" },
+  { value: "38–45%", label: "QPS cost vs. single-node" },
+  { value: "0.978", label: "recall@10, ef=10, 4-shard" },
   { value: "async", label: "WAL-stream replication" },
 ];
 
 const LAYERS = [
-  { name: "raft", icon: Network, body: "Wraps hashicorp/raft for cluster metadata only — which nodes exist, which leads each shard." },
+  { name: "raft", icon: Network, body: "Wraps hashicorp/raft for cluster metadata only: which nodes exist, which leads each shard. Timeouts are configurable." },
   { name: "ring", icon: Hash, body: "Consistent hashing over a fixed shard count, so shard identity is never a moving target." },
-  { name: "router", icon: Waypoints, body: "Writes hash to one shard; search fans out to all shards and merges each top-K." },
-  { name: "replication", icon: RefreshCw, body: "Shard leader streams its WAL to followers over plain TCP, outside Raft, for write latency." },
-  { name: "health", icon: Activity, body: "The Raft leader probes liveness — fast per-shard failover, then eviction and rebalance." },
+  { name: "router", icon: Waypoints, body: "Writes hash to one shard; search fans out to all shards, retries a failed shard once, and returns partial results if some still fail." },
+  { name: "replication", icon: RefreshCw, body: "Shard leader streams its WAL to followers outside Raft, catches diverged followers by checksum, and wakes on each write." },
+  { name: "health", icon: Activity, body: "The Raft leader probes all nodes in parallel, fails over to the most caught-up replica, then evicts and rebalances." },
 ];
 
 export function ClusterSection() {
@@ -23,7 +23,7 @@ export function ClusterSection() {
       <div className="mx-auto max-w-6xl px-6">
         <div className="grid grid-cols-1 gap-14 lg:grid-cols-[1.1fr_1fr]">
           <Reveal className="min-w-0">
-            <p className="kicker mb-5">Distributed · Phase 2</p>
+            <p className="kicker mb-5">Distributed · Library, not yet a server mode</p>
             <h2 className="text-[2rem] leading-tight font-semibold tracking-tight text-ink sm:text-[2.4rem]">
               A real cluster sits on top,{" "}
               <span className="font-serif-display italic font-normal">benchmarked honestly.</span>
@@ -33,6 +33,8 @@ export function ClusterSection() {
               which is faster but opens a measured failover window where an
               acknowledged write can be lost. We checked that with{" "}
               <code className="font-mono-ui text-[0.85em]">porcupine</code> rather than assuming it.
+              These packages are tested end to end, but <code className="font-mono-ui text-[0.85em]">nucladbd</code>{" "}
+              doesn&rsquo;t run as a cluster yet.
             </p>
 
             <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-4">

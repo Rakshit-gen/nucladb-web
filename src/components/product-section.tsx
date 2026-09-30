@@ -12,13 +12,13 @@ const FEATURES = [
     icon: Layers,
     title: "Product quantization",
     plain: "Compresses vectors so the index fits in far less memory.",
-    body: "k-means++ codebooks per subspace with asymmetric distance, so the query vector itself is never quantized.",
+    body: "k-means++ codebooks with asymmetric distance, optional re-ranking and IVF. A tested library; the server doesn't use it yet.",
   },
   {
     icon: ShieldCheck,
     title: "Crash-safe WAL",
     plain: "No acknowledged write is lost, even on a power cut.",
-    body: "Every write fsync'd before ack. CRC32-checksummed binary records make replay torn-write-safe.",
+    body: "Every write fsync'd before ack, with group commit sharing one fsync across a batch. CRC32-checksummed records make replay torn-write-safe.",
   },
   {
     icon: Database,
@@ -30,13 +30,13 @@ const FEATURES = [
     icon: Lock,
     title: "Real multi-tenancy",
     plain: "Many isolated tenants share one server safely.",
-    body: "Isolated graph, WAL, and snapshot per tenant, with its own storage quota and QPS limit.",
+    body: "Isolated graph, WAL, and snapshot per tenant, with its own dimension, metric, quota and QPS limit, plus API keys scoped to tenants.",
   },
   {
     icon: Radio,
     title: "Raft-coordinated cluster",
     plain: "Spread search across several machines.",
-    body: "Consistent-hash sharding, scatter-gather search, async WAL replication with health-checked failover.",
+    body: "Consistent-hash sharding, scatter-gather search, async WAL replication with health-checked failover. Tested as packages, not yet a server mode.",
   },
 ];
 

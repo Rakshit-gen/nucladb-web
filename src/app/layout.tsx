@@ -31,7 +31,7 @@ export const metadata: Metadata = {
     template: "%s · NuclaDB",
   },
   description:
-    "A vector similarity search engine written from scratch in Go: HNSW indexing, product quantization, a crash-safe WAL, mmap snapshots, multi-tenancy, and a Raft-coordinated distributed cluster, benchmarked head-to-head against Qdrant, honestly.",
+    "A vector similarity search engine written from scratch in Go: HNSW indexing, a crash-safe WAL, mmap snapshots, multi-tenancy with API keys, plus product quantization and Raft-coordinated clustering packages, benchmarked head-to-head against Qdrant, honestly.",
   openGraph: {
     title: "NuclaDB: the thing vector databases are made of",
     description:
