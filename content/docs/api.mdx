@@ -10,77 +10,120 @@ Default port `:8080`.
 | Method | Path | Maps to |
 |---|---|---|
 | `POST` | `/v1/tenants` | CreateTenant |
+| `GET` | `/v1/tenants` | ListTenants |
+| `DELETE` | `/v1/tenants/{id}` | DeleteTenant |
+| `PUT` | `/v1/tenants/{id}/quota` | SetQuota |
 | `POST` | `/v1/vectors` | Insert |
 | `POST` | `/v1/vectors:batch` | BatchUpsert |
+| `GET` | `/v1/vectors/{id}` | Get |
+| `PATCH` | `/v1/vectors/{id}` | UpdateMetadata |
 | `DELETE` | `/v1/vectors/{id}` | Delete |
+| `GET` | `/v1/vectors` | List (`page_size`, `page_token`) |
+| `GET` | `/v1/vectors:count` | Count |
 | `POST` | `/v1/search` | Search |
 | `GET` | `/docs` | CLI documentation page (embedded static HTML) |
 
-`tenant_id` is a JSON body field on Insert/BatchUpsert/Search/CreateTenant, or a `?tenant_id=` query parameter on Delete (which has no body). Omitting it uses the reserved `default` tenant (no quota).
+`tenant_id` is a JSON body field on requests with a body, or a `?tenant_id=` query parameter on the rest. Omitting it uses the reserved `default` tenant (no quota). Request bodies over `-max-message-bytes` (64 MiB) get a 413.
 
-### Create a tenant
+The responses below were recorded against a real local `nucladbd`.
+
+### Tenants
 
 ```jsonc
 // POST /v1/tenants
-// request
-{ "tenant_id": "acme", "max_vectors": 1000000, "max_qps": 100 }
-// response: empty object on success
+// dim and metric are optional and default to the server's -dim and -metric
+{ "tenant_id": "acme", "dim": 2, "metric": "cosine", "max_vectors": 1000 }
+// response
+{}
+
+// PUT /v1/tenants/acme/quota
+{ "max_vectors": 5000, "max_qps": 50 }
+// response
+{}
+
+// GET /v1/tenants  (metric is the DistanceMetric enum number)
+{"tenants":[{"tenant_id":"acme","quota":{"max_vectors":5000,"max_qps":50},"dim":2,"metric":1},
+            {"tenant_id":"default","vector_count":2,"quota":{},"dim":4,"metric":2}]}
+
+// DELETE /v1/tenants/acme  (removes its files; "default" can't be deleted)
+{}
 ```
 
-### Insert a vector
+Creating a tenant that already exists returns 409.
+
+### Write vectors
 
 ```jsonc
 // POST /v1/vectors
-// request
-{ "id": "1", "values": [1, 0, 0, 0], "metadata": {"team": "search"}, "tenant_id": "" }
+{ "id": "1", "values": [1, 0, 0, 0], "metadata": {"team": "search"} }
 // response
 { "id": "1" }
-```
 
-### Batch upsert
-
-```jsonc
-// POST /v1/vectors:batch
-// request
+// POST /v1/vectors:batch  (one shared WAL fsync per tenant in the batch)
 { "vectors": [
-  { "id": "10", "values": [1, 1, 0, 0] },
-  { "id": "11", "values": [1, 1, 1, 0], "metadata": {"team": "infra"} }
+  { "id": "1", "values": [1, 0, 0, 0], "metadata": {"team": "search", "year": "2023"} },
+  { "id": "2", "values": [0, 1, 0, 0], "metadata": {"team": "ads", "year": "2025"} }
 ] }
 // response
-{ "upserted": 2 }
+{"upserted":2}
+
+// PATCH /v1/vectors/2  (replaces all metadata, keeps the vector)
+{ "metadata": {"team": "infra", "year": "2025"} }
+// response
+{}
+
+// DELETE /v1/vectors/{id}?tenant_id=acme
+{ "deleted": true }
 ```
 
-### Delete
+Vector ids are decimal `uint64` strings.
+
+### Read vectors
 
 ```jsonc
-// DELETE /v1/vectors/{id}?tenant_id=acme
-// response
-{ "deleted": true }
+// GET /v1/vectors/2
+{"vector":{"id":"2","values":[0,1,0,0],"metadata":{"team":"ads","year":"2025"}}}
+
+// GET /v1/vectors?page_size=1  (pass next_page_token back as page_token)
+{"ids":["1"],"next_page_token":"2"}
+
+// GET /v1/vectors:count
+{"count":2}
 ```
 
 ### Search
 
 ```jsonc
 // POST /v1/search
-// request
-{ "query": [1, 0, 0, 0], "top_k": 3, "ef_search": 0, "filters": {"team": "infra"}, "tenant_id": "" }
+{
+  "query": [1, 0, 0, 0],
+  "top_k": 5,              // capped at 1000
+  "ef_search": 0,          // 0 = server default (64), capped at 10000
+  "filters": {"team": "infra"},          // key=value matches
+  "where": [{"key": "year", "op": "gte", "value": "2024"}]
+}
 // response
-{ "matches": [
-  { "id": "1", "score": 0, "metadata": {"team": "search"} },
-  { "id": "3", "score": 2 }
-] }
+{"matches":[{"id":"2","score":2,"metadata":{"team":"infra","year":"2025"}}]}
 ```
 
-A real recorded example:
-
-```sh
-$ curl -s -X POST localhost:8080/v1/search -d '{"query":[1,0,0,0],"top_k":2}'
-{"matches":[{"id":"3","score":2},{"id":"2","score":2,"metadata":{"team":"infra"}}]}
-```
+`where` clauses all have to match. Ops: `eq`, `ne`, `in`, `not_in` (these two take `values`), `gt`, `gte`, `lt`, `lte` (compared as numbers; a non-number never matches) and `exists`. A filter that matches at most `-exact-filter-limit` vectors (4096 by default) is answered by scoring every match exactly, so a selective filter still returns a full top-k.
 
 <Callout type="warn" title="Errors">
-  `{"error": "<message>"}`, with the HTTP status mapped from the gRPC status code: `InvalidArgument` → 400, `NotFound` → 404, `ResourceExhausted` → 429, else 500.
+  `{"error": "<message>"}`, with the HTTP status mapped from the gRPC status code: `InvalidArgument` → 400, `Unauthenticated` → 401, `PermissionDenied` → 403, `NotFound` → 404, `AlreadyExists` → 409, `ResourceExhausted` → 429, else 500.
 </Callout>
+
+## Auth and TLS
+
+Start `nucladbd` with `-api-keys=keys.json` to require a key on every request:
+
+```json
+[{"key": "at-least-16-characters", "tenants": ["acme"]},
+ {"key": "an-admin-key-for-ops", "tenants": ["*"], "admin": true}]
+```
+
+A key only reaches the tenants it lists (`*` for all). Creating, listing, deleting and re-quota'ing tenants needs an admin key. Send it as `Authorization: Bearer <key>` or `X-API-Key: <key>`; over gRPC, as `authorization` metadata. Keys are compared in constant time and must be at least 16 characters. Without `-api-keys`, every request is allowed.
+
+`-tls-cert` and `-tls-key` serve both gRPC and REST over TLS. The Go CLI reads `NUCLADB_API_KEY` and `NUCLADB_TLS=1`; the Python client takes `api_key=` and `tls=True`.
 
 ## gRPC
 
@@ -92,11 +135,25 @@ rpc Insert(InsertRequest) returns (InsertResponse);
 rpc BatchUpsert(BatchUpsertRequest) returns (BatchUpsertResponse);
 rpc Delete(DeleteRequest) returns (DeleteResponse);
 rpc Search(SearchRequest) returns (SearchResponse);
+rpc Get(GetRequest) returns (GetResponse);
+rpc List(ListRequest) returns (ListResponse);
+rpc Count(CountRequest) returns (CountResponse);
+rpc UpdateMetadata(UpdateMetadataRequest) returns (UpdateMetadataResponse);
+rpc DeleteTenant(DeleteTenantRequest) returns (DeleteTenantResponse);
+rpc SetQuota(SetQuotaRequest) returns (SetQuotaResponse);
+rpc ListTenants(ListTenantsRequest) returns (ListTenantsResponse);
 ```
 
 Key messages:
 
 ```proto
+message CreateTenantRequest {
+  string tenant_id = 1;
+  TenantQuota quota = 2;
+  int32 dim = 3;            // 0 = server default
+  DistanceMetric metric = 4; // UNSPECIFIED = server default
+}
+
 message TenantQuota {
   int64 max_vectors = 1;  // 0 means unlimited
   double max_qps = 2;     // 0 means unlimited
@@ -112,21 +169,34 @@ message Vector {
 message SearchRequest {
   repeated float query = 1;
   int32 top_k = 2;
-  DistanceMetric metric = 3;
+  DistanceMetric metric = 3; // must match the tenant's metric if set
   int32 ef_search = 4;
   repeated MetadataFilter filters = 5;
   string tenant_id = 6;
 }
 
+message MetadataFilter {
+  string key = 1;
+  string value = 2;           // for EQ, NE and the numeric ops
+  FilterOp op = 3;
+  repeated string values = 4; // for IN and NOT_IN
+}
+
+enum FilterOp {
+  FILTER_OP_EQ = 0; FILTER_OP_NE = 1; FILTER_OP_IN = 2; FILTER_OP_NOT_IN = 3;
+  FILTER_OP_GT = 4; FILTER_OP_GTE = 5; FILTER_OP_LT = 6; FILTER_OP_LTE = 7;
+  FILTER_OP_EXISTS = 8;
+}
+
 enum DistanceMetric {
-  UNSPECIFIED = 0;
-  COSINE = 1;
-  L2 = 2;
-  DOT = 3;
+  DISTANCE_METRIC_UNSPECIFIED = 0;
+  DISTANCE_METRIC_COSINE = 1;
+  DISTANCE_METRIC_L2 = 2;
+  DISTANCE_METRIC_DOT = 3;
 }
 ```
 
-The standard gRPC health-checking protocol (`grpc.health.v1.Health/Check`) is also served. This is what `nucladb-cli ping` and the cluster health checker both use.
+The standard gRPC health-checking protocol (`grpc.health.v1.Health/Check`) is also served, without a key. This is what `nucladb-cli ping` and the cluster health checker both use.
 
 ## Server flags
 
@@ -137,11 +207,16 @@ The standard gRPC health-checking protocol (`grpc.health.v1.Health/Check`) is al
 | `-data-dir` | `./data` | directory holding WAL + snapshot files |
 | `-grpc-addr` | `:9090` | gRPC listen address |
 | `-http-addr` | `:8080` | REST/JSON + `/metrics` listen address |
-| `-dim` | `128` | fixed vector dimensionality for this database |
-| `-metric` | `cosine` | distance metric: cosine, l2, or dot |
+| `-dim` | `128` | vector dimension for tenants created without their own |
+| `-metric` | `cosine` | metric for tenants created without their own: cosine, l2, or dot |
 | `-m` | `16` | HNSW M: bidirectional links per node above layer 0 |
 | `-ef-construction` | `200` | HNSW build-time candidate list size |
 | `-snapshot-interval` | `5m` | how often to snapshot to disk |
+| `-max-message-bytes` | `67108864` | largest gRPC message or REST body accepted |
+| `-exact-filter-limit` | `4096` | filters matching at most this many vectors are scored exactly |
+| `-tenant-idle-timeout` | `30m` | close tenants unused for this long (0 keeps them open) |
+| `-api-keys` | | JSON file of API keys; without it every request is allowed |
+| `-tls-cert` / `-tls-key` | | serve gRPC and REST over TLS |
 | `-metrics-interval` | `15s` | how often to refresh per-tenant usage gauges |
 
 For working examples against this API, see the [CLI reference](/docs/cli) and [quickstart](/docs/quickstart).
