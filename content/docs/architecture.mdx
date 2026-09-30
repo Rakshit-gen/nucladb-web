@@ -11,39 +11,39 @@ gRPC (:9090) ──┐
 REST (:8080) ──┘
                │
                ▼
-   internal/engine.Store   (tenant routing, storage quotas, rate limits)
-               │  (one Engine opened lazily per tenant, on first access)
+   internal/engine.Store   (tenant routing, API-key scope, quotas, rate limits)
+               │  (one Engine opened lazily per tenant, closed when idle)
                ▼
    internal/engine.Engine
                │
    ┌───────────┴────────────┐
-   │  WAL (fsync every      │
-   │  write) ──▶ HNSW graph │──▶ optional internal/index/pq (product quantization)
-   │             (in-memory)│
+   │  WAL (fsync before ack,│
+   │  group commit) ──▶ HNSW│
+   │  graph (in-memory)     │
    └───────────┬────────────┘
                ▼
    internal/storage/segment (periodic mmap-backed snapshot)
 ```
 
-Every write is WAL-logged and fsync'd before it touches the graph. Periodic snapshots let a restart skip replaying the WAL from empty. See [WAL then snapshot](/docs/design-decisions/wal-then-snapshot) for what that durability guarantee costs.
+Every write is WAL-logged and fsync'd before it touches the graph. Concurrent writes share one fsync (group commit), and a batch upsert fsyncs once for the whole batch. Periodic snapshots let a restart skip replaying the WAL from empty; they are written without blocking writes, and a mostly-deleted graph is compacted when snapshotted. See [WAL then snapshot](/docs/design-decisions/wal-then-snapshot) for what that durability guarantee costs.
 
 ## The pieces
 
-- **`internal/api/grpc` + `internal/api/gateway`**: the gRPC service and a hand-written REST/JSON translation layer over it. Not `grpc-gateway`, since vendoring the full googleapis proto tree isn't worth it for five routes.
-- **`internal/engine.Store`**: routes requests to the right tenant, and enforces storage quotas (max vectors) and rate limits (max QPS) before a request reaches the engine. One `Engine` is opened lazily per tenant, on first access.
-- **`internal/engine.Engine`**: owns one tenant's WAL, HNSW graph, and optional PQ index.
-- **`internal/index/hnsw`**: Malkov and Yashunin's Hierarchical Navigable Small World graph, from scratch. Coarse-grained RW-locked for correctness, verified under `go test -race`.
-- **`internal/index/pq`**: optional lossy compression, using k-means++-trained codebooks per subspace and asymmetric distance computation (ADC) so the query vector itself is never quantized.
-- **`internal/storage/wal`**: fsync-before-ack on every write, a custom binary record format with CRC32 checksums, and torn-write-safe replay.
+- **`internal/api/grpc` + `internal/api/gateway`**: the gRPC service and a hand-written REST/JSON translation layer over it. Not `grpc-gateway`, since vendoring the full googleapis proto tree isn't worth it for a dozen routes. Optional API keys (`internal/auth`) and TLS sit in front of both.
+- **`internal/engine.Store`**: routes requests to the right tenant, and enforces storage quotas (max vectors) and rate limits (max QPS) before a request reaches the engine. One `Engine` is opened lazily per tenant, on first access, and closed again after `-tenant-idle-timeout`.
+- **`internal/engine.Engine`**: owns one tenant's WAL, HNSW graph, and metadata index. Metadata filters use per-key postings, and a selective filter is answered by exact scoring instead of the graph.
+- **`internal/index/hnsw`**: Malkov and Yashunin's Hierarchical Navigable Small World graph, from scratch, with the paper's diversity heuristic for neighbor selection and a parallel batch build. Searches share a read lock; an insert finds its neighbors without the write lock and takes it only to link in. Verified under `go test -race`.
+- **`internal/index/pq`**: lossy compression, using k-means++-trained codebooks per subspace and asymmetric distance computation (ADC), with re-ranking and an IVF variant. A tested package that `nucladbd` doesn't use yet.
+- **`internal/storage/wal`**: fsync-before-ack, a custom binary record format with CRC32 checksums, and torn-write-safe replay that refuses to silently skip corruption in the middle of the log.
 - **`internal/storage/segment`**: atomic (write-to-temp, rename-into-place) full-graph snapshots, loaded via mmap so a dataset larger than RAM can page in via the OS instead of failing.
 
 ## Multi-tenancy
 
-Every tenant gets a fully isolated graph, WAL, and snapshot on disk, with its own storage quota (max vectors) and rate limit (max QPS), enforced before a request reaches the engine. The [CLI reference](/docs/cli#multi-tenancy--filtering) shows this in a real recorded session: the same vector id existing independently, with different data, under two different tenants.
+Every tenant gets a fully isolated graph, WAL, and snapshot on disk, with its own dimension, distance metric, storage quota (max vectors) and rate limit (max QPS). Quotas are enforced before a request reaches the engine, and all of it persists across restarts. The [CLI reference](/docs/cli#multi-tenancy--filtering) shows this in a real recorded session: the same vector id existing independently, with different data, under two different tenants.
 
 ## Observability
 
-- **OpenTelemetry tracing**: every gRPC call gets a trace span. Exports to stdout by default, or to any OTLP/gRPC collector via `OTEL_EXPORTER_OTLP_ENDPOINT`.
+- **OpenTelemetry tracing**: every gRPC call gets a trace span. Export is off by default so the hot path doesn't pay for spans nobody reads; set `OTEL_EXPORTER_OTLP_ENDPOINT` to send them to a collector, or `NUCLADB_TRACE_STDOUT=1` to print them.
 - **Prometheus metrics**: request-count/duration histograms (raw histograms, not pre-baked percentiles), plus per-tenant quota-usage gauges, served at `/metrics`.
 
 For the distributed layer built on top of this single-node engine, see [Distributed cluster](/docs/distributed).
