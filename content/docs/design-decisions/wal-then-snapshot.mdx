@@ -1,29 +1,31 @@
 ---
 title: Why WAL-then-snapshot, and what it costs
-description: The ~350x build-time gap vs. Qdrant, measured and explained.
+description: Build time went from 43.9s to 416ms without giving up fsync-before-ack.
 ---
 
-Every write to NuclaDB is logged to a write-ahead log and fsync'd to disk before the call returns, and before the vector touches the in-memory HNSW graph. On restart, a periodic snapshot means the engine doesn't have to replay the WAL from empty. This is the safe, unglamorous choice for a system that promises durable writes, and it has a measured cost.
+Every write to NuclaDB is logged to a write-ahead log and fsync'd to disk before the call returns, and before the vector touches the in-memory HNSW graph. On restart, a periodic snapshot means the engine doesn't have to replay the WAL from empty. This is the safe, unglamorous choice for a system that promises durable writes. It used to have a large measured cost; most of that is gone now.
 
-## The measured cost
+## Where the build time went
 
-10,000 base vectors, 100 queries, dim=128, SIFT-small, real network API on both sides:
+10,000 base vectors, dim=128, SIFT-small, real network API on both sides:
 
-| Backend | Build time | RSS after build |
-|---|---|---|
-| NuclaDB | 43.90628575s | 45.2 MB |
-| Qdrant | 124.000458ms | 96.4 MB |
+| Version | Build time (10K vectors) |
+|---|---|
+| fsync per vector | 43.9s |
+| one fsync per batch of 500 (group commit) | 3.2s |
+| + unrolled distance, slice-based graph, parallel batch build | 415ms |
+| Qdrant, index built | 551 to 557ms |
 
-<Callout type="warn" title="~350x slower to build">
-  fsync-per-write with no batching costs roughly 4.4ms per insert on this machine. It's a real gap, not a rounding artifact.
+The current benchmark run: NuclaDB 416ms and 45.7 MB RSS after build, Qdrant 557ms and 115.4 MB.
+
+fsync per vector cost about 4.4ms per insert on this machine. Group commit fixed that: `BatchUpsert` writes a batch of records and fsyncs once, and the whole batch is durable before any of it touches the graph, so a failed fsync applies nothing. Concurrent single `Insert` calls share fsyncs too: the first caller logs everything queued behind it in one group. The rest of the 3.2s was HNSW construction, which faster distance kernels, a slice-based graph and a parallel batch build brought down to 415ms.
+
+<Callout type="warn" title="The old 350x number was wrong">
+  An earlier version of this page compared NuclaDB's 43.9s against a Qdrant build of 124ms. That Qdrant number never built an index: Qdrant skips HNSW indexing for segments under its `indexing_threshold` (10,000 KB by default), and this dataset is about 5,000 KB, so it only ingested the points and answered every search by brute force. With indexing forced on and timed until every vector is indexed, Qdrant takes about 0.55s. The 43.9s was real, though.
 </Callout>
-
-It isn't a one-sided tradeoff, though: NuclaDB's RSS stays under half of Qdrant's throughout, and NuclaDB wins on QPS at low `ef` (see [HNSW ef tuning](/docs/design-decisions/hnsw-ef-tuning)). The build-time cost buys durability and a smaller memory footprint, not nothing.
-
-## What isn't built yet
-
-The known fix is group commit: batch N writes into a single fsync instead of one fsync per write. This is a standard database technique, and it's how most WAL-based systems amortize fsync cost. It isn't implemented in NuclaDB yet.
 
 ## Why fsync-before-ack instead of async
 
-The alternative is to acknowledge the write and fsync later, which trades durability for speed: a crash between ack and fsync loses an acknowledged write. NuclaDB's WAL uses a custom binary record format with CRC32 checksums and torn-write-safe replay so a crash mid-write doesn't corrupt the log. fsync-before-ack is what makes "the WAL says it happened" actually mean it happened.
+The alternative is to acknowledge the write and fsync later, which trades durability for speed: a crash between ack and fsync loses an acknowledged write. Group commit keeps the same promise, since a call only returns after the shared fsync. NuclaDB's WAL uses a custom binary record format with CRC32 checksums and torn-write-safe replay, so a crash mid-write doesn't corrupt the log, and a bad record in the middle of the log is reported as corruption rather than silently truncated. fsync-before-ack is what makes "the WAL says it happened" actually mean it happened.
+
+Snapshots and compaction don't block writes: the engine copies what it needs under the lock and does the slow disk work outside it.
