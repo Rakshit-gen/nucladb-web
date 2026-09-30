@@ -3,9 +3,9 @@ title: CLI Reference
 description: Every nucladb-cli command, with real recorded output.
 ---
 
-Commands: `ping`, `create-tenant`, `insert`, `batch-upsert`, `search`, `delete`, plus `quickstart` (scripted demo), shell completion, and a `-json` output flag.
+Commands: `ping`, `create-tenant`, `tenants`, `set-quota`, `delete-tenant`, `insert`, `batch-upsert`, `get`, `update-metadata`, `list`, `count`, `search`, `delete`, plus `quickstart` (scripted demo), shell completion, and a `-json` output flag.
 
-**Connecting**: talks to `localhost:9090` by default; override via the `NUCLADB_ADDR` env var.
+**Connecting**: talks to `localhost:9090` by default; override via the `NUCLADB_ADDR` env var. For a server run with `-api-keys`, set `NUCLADB_API_KEY`; set `NUCLADB_TLS=1` if it serves TLS.
 
 **Multi-tenancy**: every data command accepts `-tenant`; omitting it uses the reserved `default` tenant (no quota). A non-default tenant must be created first via `create-tenant`.
 
@@ -51,6 +51,52 @@ $ nucladb-cli search -vector=1,0,0,0 -top-k=5 -tenant=acme
 1	score=0.000000	map[who:acme]
 ```
 
+`create-tenant` also takes `-dim` and `-metric` (`cosine`, `l2`, `dot`), so tenants on one server can hold different vector sizes and metrics. Both default to the server's own `-dim` and `-metric`.
+
+## Richer filters
+
+`-where` takes `key:op` or `key:op:value`, with op one of `eq ne in not_in gt gte lt lte exists`. `in`/`not_in` take comma-separated values, and the numeric ops compare as numbers. Repeat it to AND clauses:
+
+```
+$ nucladb-cli search -vector=1,0,0,0 -where=year:gte:2024 -where=team:in:search,infra
+2	score=2.000000	map[team:infra year:2025]
+```
+
+## Reading and editing vectors
+
+```
+$ nucladb-cli get -id=2
+2	[0 1 0 0]	map[team:ads year:2025]
+
+$ nucladb-cli update-metadata -id=2 -meta=team=infra -meta=year=2025
+updated id=2
+
+$ nucladb-cli list
+1
+2
+
+$ nucladb-cli count
+2
+```
+
+`update-metadata` replaces all of a vector's metadata and leaves the vector alone.
+
+## Tenant admin
+
+```
+$ nucladb-cli tenants
+default	vectors=2	dim=4	metric=l2	max_vectors=0	max_qps=0
+t2	vectors=0	dim=2	metric=cosine	max_vectors=5	max_qps=0
+
+$ nucladb-cli set-quota -id=t2 -max-vectors=5
+set quota for "t2"
+
+$ nucladb-cli delete-tenant -id=t2
+deleted tenant "t2"
+```
+
+On a server with API keys, these need an admin key.
+
 ## Quota / rate-limit errors
 
 ```
@@ -61,9 +107,9 @@ $ nucladb-cli insert -id=5 -tenant=doesnotexist -vector=1,1,1,1
 nucladb-cli: rpc error: code = NotFound desc = engine: tenant not found
 ```
 
-<Callout type="warn" title="Documented limitation">
-  Tenant quota (`-max-vectors`/`-max-qps`) lives in server process memory only. A `nucladbd` restart resets every tenant's quota to unlimited. Vector data itself is fully durable across restart (WAL and snapshot); only the quota policy is not yet persisted.
-</Callout>
+With `-api-keys` on the server, a missing key gets `Unauthenticated` and a key that doesn't cover the tenant gets `PermissionDenied`.
+
+Tenant quotas, dimension and metric are saved in the tenant's data directory and survive a restart.
 
 ## Python client
 
@@ -71,15 +117,26 @@ nucladb-cli: rpc error: code = NotFound desc = engine: tenant not found
 pip install ./clients/python
 ```
 
-Installs both the `nucladb` library and a `nucladb` CLI with the same commands:
+Installs the `nucladb` library and a `nucladb` CLI covering the core commands (the newer read and tenant-admin operations are library methods):
 
 ```python
 from nucladb import Client, DistanceMetric
 
-with Client("localhost:9090") as db:
-    db.insert("1", [1.0, 0.0, 0.0, 0.0], metadata={"team": "search"})
+with Client("localhost:9090", api_key="", tls=False) as db:
+    db.insert("1", [1.0, 0.0, 0.0, 0.0], metadata={"team": "search", "year": "2025"})
     for match in db.search([1.0, 0.0, 0.0, 0.0], top_k=3, metric=DistanceMetric.L2):
         print(match.id, match.score, match.metadata)
+
+    db.search([1.0, 0.0, 0.0, 0.0], where=[("year", "gte", 2024), ("team", "in", ["search", "ads"])])
+    db.get("1")                                 # (vector, metadata), or None
+    db.update_metadata("1", {"team": "infra"})
+    ids = list(db.list())
+    db.count()
+
+    db.create_tenant("acme", dim=384, metric=DistanceMetric.COSINE)
+    db.set_quota("acme", max_qps=50)
+    db.list_tenants()
+    db.delete_tenant("acme")
 ```
 
 Its smoke test builds the real Go `nucladbd` binary and runs it as a subprocess, so it's an actual end-to-end test, not a mocked one.
