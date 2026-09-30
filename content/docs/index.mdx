@@ -3,7 +3,7 @@ title: Introduction
 description: What NuclaDB is and how these docs are organized.
 ---
 
-NuclaDB is a vector similarity search engine written from scratch in Go. That includes the HNSW graph, the crash-safe WAL, product quantization, multi-tenancy, and a Raft-coordinated distributed cluster with sharding and replication. All of it is implemented directly in this repo, not imported from another engine.
+NuclaDB is a vector similarity search engine written from scratch in Go. The server, `nucladbd`, runs the HNSW graph, the crash-safe WAL, mmap snapshots, multi-tenancy, metadata filters, API keys and TLS, and a gRPC + REST API. Product quantization and a Raft-coordinated sharded cluster are also implemented and tested as Go packages, but the server doesn't run them yet. All of it is implemented directly in this repo, not imported from another engine.
 
 <Callout type="info" title="Why this exists">
   Most "vector database" side projects wrap an existing engine (Qdrant, Pinecone, pgvector) behind an app. NuclaDB is the other direction: it implements the kind of internals those engines are built from, and is benchmarked head-to-head against a real Qdrant instance instead of assumed to be competitive.
@@ -13,7 +13,7 @@ NuclaDB is a vector similarity search engine written from scratch in Go. That in
 
 <Cards>
   <Card title="Quickstart" description="Install the CLI and run a scripted demo against a real local server." href="/docs/quickstart" />
-  <Card title="Architecture" description="The single-node request flow: gRPC/REST, then the engine, WAL, HNSW, optional PQ, and mmap snapshot." href="/docs/architecture" />
+  <Card title="Architecture" description="The single-node request flow: gRPC/REST, then the engine, WAL, HNSW, and mmap snapshot." href="/docs/architecture" />
   <Card title="API reference" description="REST/JSON and gRPC request and response shapes, taken from the real Go structs and .proto file." href="/docs/api" />
   <Card title="CLI reference" description="Every nucladb-cli command, with real recorded output, including quota and tenant errors." href="/docs/cli" />
   <Card title="Distributed cluster" description="Raft, consistent hashing, scatter-gather routing, async WAL replication, and health-checked failover." href="/docs/distributed" />
@@ -24,8 +24,10 @@ NuclaDB is a vector similarity search engine written from scratch in Go. That in
 
 A few things are worth knowing up front, so nothing here reads as more finished than it is:
 
-- Build time is about 350x slower than Qdrant on the same dataset, because of fsync-per-write with no batching. See [WAL then snapshot](/docs/design-decisions/wal-then-snapshot).
-- Product quantization gets 57.7% recall@10 at 16x compression. This is the near-worst-case configuration (no re-ranking, no IVF), used as a clean measurement of quantization error alone. See [Product quantization cost](/docs/design-decisions/product-quantization-cost).
-- A 4-shard cluster runs 22 to 42% slower (in QPS) than single-node, from scatter-gather network hops. See [What Raft gave and cost](/docs/design-decisions/what-raft-gave-and-cost).
+- Qdrant's recall is a little higher at low `ef` (0.959 vs 0.932 at ef=10), though NuclaDB is faster at every `ef` tested. See [HNSW ef tuning](/docs/design-decisions/hnsw-ef-tuning).
+- Product quantization and the sharded cluster are libraries, not server modes: `nucladbd` runs a single node without PQ. Nothing yet starts replication streams per shard or moves data on a rebalance. See [Distributed cluster](/docs/distributed).
+- Flat product quantization gets 57.7% recall@10 at 16x compression; re-ranking the top 100 brings it to 99.3%. See [Product quantization cost](/docs/design-decisions/product-quantization-cost).
+- A 4-shard cluster runs 38 to 45% slower (in QPS) than single-node, from scatter-gather network hops. See [What Raft gave and cost](/docs/design-decisions/what-raft-gave-and-cost).
+- Replication is async, so a leader failover can lose an acknowledged write. The Jepsen-style tests report this rather than hide it.
 
 The numbers in these docs come directly from committed benchmark output (`bench/results.md`, `bench/results-cluster.md`) or from the Go source itself. None of it is estimated.
