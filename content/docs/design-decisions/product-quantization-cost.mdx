@@ -1,6 +1,6 @@
 ---
 title: What product quantization cost
-description: 57.7% recall@10 at 16x compression, the near-worst-case configuration, measured on purpose.
+description: 57.7% recall@10 at 16x compression for flat PQ, and 99.3% once the top 100 are re-ranked.
 ---
 
 Product quantization (PQ) trades recall for memory. Instead of storing full-precision vectors, it trains k-means++ codebooks per subspace and stores compressed codes. NuclaDB's implementation (`internal/index/pq`) uses asymmetric distance computation (ADC), so the query vector itself is never quantized, only the stored vectors are.
@@ -10,15 +10,36 @@ Product quantization (PQ) trades recall for memory. Instead of storing full-prec
 57.7% recall@10 at a fixed 16x memory reduction (M=16, Dim=64), from `internal/index/pq/pq_test.go`'s `TestIndexRecallVsExact`, which is deterministic across 5 runs with fixed seeds.
 
 <Callout type="warn" title="This is flat, unindexed PQ, on purpose">
-  No re-ranking, no IVF coarse quantizer. Production PQ setups typically add both. This configuration leaves them out deliberately, as a clean measurement of quantization error alone, not because it's the recommended way to run PQ in production.
+  No re-ranking, no IVF coarse quantizer. Production PQ setups typically add both, and so does NuclaDB now (below). The 57.7% leaves them out deliberately, as a clean measurement of quantization error alone.
 </Callout>
 
-## Why it isn't higher
+## Re-ranking and IVF, measured
 
-Two follow-ups explain the gap, and neither is implemented yet:
+Both follow-ups now exist as library code in `internal/index/pq`.
 
-- **No re-ranking**: a typical PQ pipeline re-scores the top candidates against their full-precision vectors before returning results, which recovers most of the lost recall. NuclaDB's PQ path doesn't do this yet.
-- **No IVF**: an inverted-file coarse quantizer narrows the search to a subset of the index before PQ scoring, which also tends to improve effective recall by avoiding compression error building up over the full dataset.
+**Re-ranking** (`pq.Index.SearchRerank`) takes the top candidates by PQ distance and re-scores them against their full-precision vectors. Same data and codebooks as the 57.7% number:
+
+| Configuration | recall@10 |
+|---|---|
+| PQ alone | 0.577 |
+| PQ + re-rank top 50 | 0.960 |
+| PQ + re-rank top 100 | 0.993 |
+| PQ + re-rank top 200 | 1.000 |
+
+Re-ranking needs the full vectors, so it gives back the memory saving: it fits when codes live in RAM and full vectors live on disk.
+
+**IVF** (`pq.IVFIndex`) puts an inverted file in front of the codes: k-means splits the vectors into `nlist` lists, and a search scans only the `nprobe` lists closest to the query. Uniform random data has no cluster structure for IVF to use, so this was measured on 5,000 clustered vectors, 30 held-out queries, `nlist` = 32, re-ranking the top 100:
+
+| nprobe | share of codes scanned | recall@10 |
+|---|---|---|
+| 1 | ~1/32 | 0.637 |
+| 4 | ~1/8 | 0.870 |
+| 8 | ~1/4 | 0.943 |
+| 32 | all | 0.993 |
+
+<Callout type="info" title="Not in the server yet">
+  PQ, re-ranking and IVF are tested packages. `nucladbd` doesn't use them: every tenant is a full-precision HNSW index.
+</Callout>
 
 ## What's verified
 
