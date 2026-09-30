@@ -7,19 +7,19 @@ const WRITEUPS = [
     n: "01",
     slug: "wal-then-snapshot",
     title: "Why WAL-then-snapshot, and what it costs",
-    body: "Every insert fsyncs before returning (~4.4ms each): the direct cause of the ~350x build-time gap vs. Qdrant.",
+    body: "Every write fsyncs before returning. Group commit and a parallel build took a 10K build from 43.9s to 416ms, now faster than Qdrant.",
   },
   {
     n: "02",
     slug: "hnsw-ef-tuning",
     title: "Tuning HNSW: what the recall/latency curve looks like",
-    body: "Recall saturates by ef=50 (0.997); ef=200 buys +0.3% recall for over 2x the latency.",
+    body: "Recall saturates by ef=50 (0.996); ef=200 buys +0.4% recall for about 1.8x the latency.",
   },
   {
     n: "03",
     slug: "product-quantization-cost",
     title: "What product quantization cost",
-    body: "57.7% recall@10 at 16x compression, capped by no re-ranking and no IVF: named as follow-up, not hidden.",
+    body: "57.7% recall@10 at 16x compression for flat PQ, 99.3% after re-ranking the top 100, and IVF measured too.",
   },
   {
     n: "04",

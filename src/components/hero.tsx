@@ -47,10 +47,10 @@ export function Hero() {
 
         <div className="mt-9 flex flex-wrap items-center gap-x-8 gap-y-2 border-t border-white/10 pt-6 font-mono-ui text-[0.78rem] text-white/40">
           <span>
-            <span className="text-white/80">45 MB</span> memory
+            <span className="text-white/80">46 MB</span> for 10K vectors
           </span>
           <span>
-            <span className="text-white/80">7,400</span> searches/sec
+            <span className="text-white/80">13,900</span> searches/sec
           </span>
           <span>
             <span className="text-white/80">zero</span> vendored engines
@@ -64,9 +64,9 @@ export function Hero() {
             lines={[
               { text: "$ curl -fsSL .../install.sh | sh" },
               { text: "$ nucladb-cli quickstart", muted: false },
-              { text: "  spinning up a throwaway local server…", muted: true },
-              { text: "  inserted 3 vectors, searched top-3 in 0.4ms", muted: true },
-              { text: "  → keep using it: NUCLADB_ADDR=127.0.0.1:53211", muted: true },
+              { text: "  Starting a throwaway nucladbd (dim=4, metric=l2) ...", muted: true },
+              { text: "  $ nucladb-cli search -vector=1,0,0,0 -top-k=2", muted: true },
+              { text: "  export NUCLADB_ADDR=127.0.0.1:53211", muted: true },
             ]}
           />
         </div>
