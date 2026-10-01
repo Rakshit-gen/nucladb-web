@@ -33,7 +33,7 @@ export function ArchitectureSection() {
   }, [paused]);
 
   return (
-    <section id="architecture" className="bg-cream py-24">
+    <section id="architecture" className="bg-cream pt-20">
       <div className="mx-auto max-w-6xl px-6">
         <SectionHeader title="What happens to your data">
           <p>Saving goes to disk before anything else. Searching never waits on the disk.</p>
@@ -60,7 +60,7 @@ export function ArchitectureSection() {
         </div>
 
         <ol
-          className="dot-grid mt-8 grid grid-cols-1 gap-5 rounded-2xl border border-cream-line bg-[#f8f0dc] p-6 md:grid-cols-6 md:gap-0 md:p-10"
+          className="dot-grid mt-6 grid grid-cols-1 gap-5 rounded-2xl border border-cream-line bg-[#f8f0dc] p-6 md:grid-cols-6 md:gap-0 md:p-10"
           onMouseEnter={() => setPaused(true)}
           onMouseLeave={() => setPaused(false)}
         >

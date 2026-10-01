@@ -64,7 +64,7 @@ export function CtaSection() {
   }
 
   return (
-    <section id="get-started" className="border-t border-ink/15 bg-cream-deep py-28">
+    <section id="get-started" className="border-t border-ink/15 bg-cream-deep py-20">
       <div className="mx-auto grid max-w-6xl grid-cols-1 gap-12 px-6 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
         <div>
           <h2 className="text-[clamp(2.25rem,4.6vw,3.75rem)] leading-[1.05] font-medium tracking-[-0.045em]">

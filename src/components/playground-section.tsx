@@ -121,7 +121,7 @@ export function PlaygroundSection() {
     : null;
 
   return (
-    <section id="playground" className="bg-navy-950 pt-24 pb-24 text-white">
+    <section id="playground" className="bg-navy-950 py-20 text-white">
       <div className="mx-auto max-w-6xl px-6">
         <SectionHeader title="Try the index in your browser" dark>
           <p>
@@ -132,7 +132,7 @@ export function PlaygroundSection() {
           </p>
         </SectionHeader>
 
-        <div className="mt-12 rounded-lg border border-white/15">
+        <div className="mt-10 rounded-lg border border-white/15">
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/15 px-6 py-3.5 sm:px-7">
               <span className="font-mono-ui text-[0.74rem] text-white/40">
                 dim={DIM} &middot; cosine &middot; M={M} &middot; efConstruction={EF_CONSTRUCTION} &middot; efSearch={EF_SEARCH}

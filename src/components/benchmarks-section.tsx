@@ -133,13 +133,13 @@ function Bar({ value, max, us, children }: { value: number; max: number; us: boo
 export function BenchmarksSection() {
   const [ref, seen] = useSeen<HTMLDivElement>();
   return (
-    <section id="benchmarks" className="bg-cream py-24">
+    <section id="benchmarks" className="bg-cream pt-20">
       <div className="mx-auto max-w-6xl px-6">
         <SectionHeader title="Against Qdrant, on the same machine">
           <p>10,000 items, 100 searches, median of 5 runs. Hover the bars for numbers.</p>
         </SectionHeader>
 
-        <div ref={ref} className="mt-12 grid grid-cols-3 divide-x divide-ink/15 border-y-2 border-ink">
+        <div ref={ref} className="mt-10 grid grid-cols-3 divide-x divide-ink/15 border-y-2 border-ink">
           {[
             { to: 1.8, fmt: (v: number) => `${v.toFixed(1)}×`, label: "up to, searches per second" },
             { to: 2.5, fmt: (v: number) => `${v.toFixed(1)}×`, label: "less memory" },

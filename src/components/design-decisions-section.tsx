@@ -22,13 +22,13 @@ const WRITEUPS = [
 
 export function DesignDecisionsSection() {
   return (
-    <section className="bg-cream py-24">
+    <section className="bg-cream py-20">
       <div className="mx-auto max-w-6xl px-6">
         <SectionHeader title="How it was built">
           <p>Short write-ups on the choices that mattered.</p>
         </SectionHeader>
 
-        <ol className="mt-8 border-t border-ink">
+        <ol className="mt-10 border-t border-ink">
           {WRITEUPS.map((w) => (
             <li key={w.slug} className="border-b border-ink/15">
               <Link
