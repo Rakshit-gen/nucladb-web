@@ -54,10 +54,6 @@ export function Hero() {
         <div className="w-full max-w-2xl"><HeroSearchDemo /></div>
       </div>
 
-      <div className="relative z-10 mx-auto mt-10 flex items-center gap-2 text-white/30">
-        <span className="font-mono-ui text-[0.68rem] uppercase tracking-[0.2em]">Scroll</span>
-        <span className="h-8 w-px bg-white/30" />
-      </div>
     </section>
   );
 }
