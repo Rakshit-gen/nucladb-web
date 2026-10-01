@@ -12,3 +12,17 @@ export function GithubIcon({ size = 16, className }: { size?: number; className?
     </svg>
   );
 }
+
+// The NuclaDB mark: an N traced as a search path through four graph nodes,
+// ending on the match.
+export function NuclaMark({ size = 24, className }: { size?: number; className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" width={size} height={size} fill="none" className={className} aria-hidden="true">
+      <path d="M5.5 18.5V5.5l13 13V5.5" stroke="currentColor" strokeOpacity="0.85" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx="5.5" cy="18.5" r="2.4" fill="currentColor" />
+      <circle cx="5.5" cy="5.5" r="2.4" fill="currentColor" />
+      <circle cx="18.5" cy="18.5" r="2.4" fill="currentColor" />
+      <circle cx="18.5" cy="5.5" r="3.3" fill="#7fe3d4" />
+    </svg>
+  );
+}
