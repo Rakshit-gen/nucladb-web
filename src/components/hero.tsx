@@ -12,12 +12,9 @@ export function Hero() {
 
       <div className="relative z-10 mx-auto flex w-full max-w-6xl flex-1 flex-col items-center gap-12 px-6">
         <div className="flex min-w-0 flex-col items-center text-center">
-        <h1 className="max-w-2xl text-[2.9rem] leading-[1.04] font-semibold tracking-tight text-white sm:text-[4.25rem]">
-          Search by meaning,
-          <br />
-          <span className="font-serif-display italic font-normal text-glow-cyan">
-            built from the index up.
-          </span>
+        <h1 className="max-w-3xl text-[clamp(2.5rem,5vw,4rem)] leading-[1.12] font-medium tracking-[-0.045em] text-white [text-shadow:0_2px_18px_var(--navy-950)]">
+          <span className="inline-block whitespace-nowrap"><span className="hero-word hero-word-first inline-block">Search</span>{" "}<span className="hero-word hero-word-second inline-block">by</span></span>{" "}
+          <span className="hero-word hero-word-third inline-block text-glow-cyan">meaning.</span>
         </h1>
         <p className="mt-6 max-w-md text-[0.98rem] leading-relaxed text-white/70">
           A vector database finds the closest matches to an embedding, which is
