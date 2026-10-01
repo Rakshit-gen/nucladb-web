@@ -1,22 +1,15 @@
 import type { Metadata } from "next";
-import { Inter_Tight, Instrument_Serif, JetBrains_Mono } from "next/font/google";
+import { IBM_Plex_Sans, IBM_Plex_Mono } from "next/font/google";
 import { RootProvider } from "fumadocs-ui/provider/next";
 import "./globals.css";
 
-const sans = Inter_Tight({
+const sans = IBM_Plex_Sans({
   variable: "--font-sans",
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
 });
 
-const serif = Instrument_Serif({
-  variable: "--font-serif",
-  subsets: ["latin"],
-  weight: ["400"],
-  style: ["italic", "normal"],
-});
-
-const mono = JetBrains_Mono({
+const mono = IBM_Plex_Mono({
   variable: "--font-mono",
   subsets: ["latin"],
   weight: ["400", "500"],
@@ -31,7 +24,7 @@ export const metadata: Metadata = {
     template: "%s · NuclaDB",
   },
   description:
-    "A vector similarity search engine written from scratch in Go: HNSW indexing, a crash-safe WAL, mmap snapshots, multi-tenancy with API keys, plus product quantization and Raft-coordinated clustering packages, benchmarked head-to-head against Qdrant, honestly.",
+    "An open-source vector database written in Go: HNSW search, a crash-safe write-ahead log, mmap snapshots and per-tenant API keys, benchmarked against Qdrant.",
   openGraph: {
     title: "NuclaDB: the thing vector databases are made of",
     description:
@@ -56,7 +49,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${sans.variable} ${serif.variable} ${mono.variable} h-full antialiased`}
+      className={`${sans.variable} ${mono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-cream text-ink">
         <RootProvider theme={{ forcedTheme: "light", enableSystem: false }}>{children}</RootProvider>
