@@ -1,69 +1,48 @@
 import Link from "next/link";
-import { ArrowUpRight } from "lucide-react";
-import { Reveal } from "./reveal";
+import { SectionHeader } from "./section-header";
 
 const WRITEUPS = [
   {
-    n: "01",
     slug: "wal-then-snapshot",
     title: "Why WAL-then-snapshot, and what it costs",
-    body: "Every write fsyncs before returning. Group commit and a parallel build took a 10K build from 43.9s to 416ms, now faster than Qdrant.",
   },
   {
-    n: "02",
     slug: "hnsw-ef-tuning",
     title: "Tuning HNSW: what the recall/latency curve looks like",
-    body: "Recall saturates by ef=50 (0.996); ef=200 buys +0.4% recall for about 1.8x the latency.",
   },
   {
-    n: "03",
     slug: "product-quantization-cost",
     title: "What product quantization cost",
-    body: "57.7% recall@10 at 16x compression for flat PQ, 99.3% after re-ranking the top 100, and IVF measured too.",
   },
   {
-    n: "04",
     slug: "what-raft-gave-and-cost",
     title: "What Raft gave the system, and what it cost",
-    body: "Raft agrees on shard topology through faults, but async replication means cross-failover linearizability isn't guaranteed: checked with Jepsen-style testing.",
   },
 ];
 
 export function DesignDecisionsSection() {
   return (
-    <section className="relative bg-cream py-28">
+    <section className="bg-cream py-24">
       <div className="mx-auto max-w-6xl px-6">
-        <Reveal>
-          <p className="kicker mb-5">Engineering notes</p>
-          <h2 className="max-w-2xl text-[2rem] leading-tight font-semibold tracking-tight text-ink sm:text-[2.4rem]">
-            Every design decision, with its{" "}
-            <span className="font-serif-display italic font-normal">measured</span> cost.
-          </h2>
-          <p className="mt-6 max-w-md text-[0.98rem] leading-relaxed text-ink-soft">
-            Four write-ups on tradeoffs we made and what they cost.
-          </p>
-        </Reveal>
+        <SectionHeader title="How it was built">
+          <p>Short write-ups on the choices that mattered.</p>
+        </SectionHeader>
 
-        <div className="mt-16 grid grid-cols-1 gap-6 md:grid-cols-2">
-          {WRITEUPS.map((w, i) => (
-            <Reveal key={w.slug} delay={i * 0.06}>
+        <ol className="mt-8 border-t border-ink">
+          {WRITEUPS.map((w) => (
+            <li key={w.slug} className="border-b border-ink/15">
               <Link
                 href={`/docs/design-decisions/${w.slug}`}
-                className="group flex h-full flex-col rounded-2xl border border-cream-line bg-white/50 p-8 transition-colors hover:bg-white/90"
+                className="group flex items-baseline justify-between gap-6 px-2 py-6 transition-colors duration-200 hover:bg-ink md:px-4"
               >
-                <div className="flex items-start justify-between">
-                  <span className="font-mono-ui text-[0.78rem] text-ink-faint">{w.n}</span>
-                  <ArrowUpRight
-                    size={16}
-                    className="text-ink-faint transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-ink"
-                  />
-                </div>
-                <h3 className="mt-4 text-[1.08rem] font-semibold leading-snug text-ink">{w.title}</h3>
-                <p className="mt-3 text-[0.92rem] leading-relaxed text-ink-soft">{w.body}</p>
+                <h3 className="text-[1.15rem] font-medium text-ink transition-colors group-hover:text-cream">
+                  {w.title}
+                </h3>
+                <span aria-hidden="true" className="text-ink-faint transition-transform group-hover:translate-x-1 group-hover:text-glow-cyan">→</span>
               </Link>
-            </Reveal>
+            </li>
           ))}
-        </div>
+        </ol>
       </div>
     </section>
   );
