@@ -1,70 +1,106 @@
-import { Reveal } from "./reveal";
+"use client";
 
-const STAGES = [
-  {
-    label: "Client",
-    title: "gRPC :9090 · REST :8080",
-    body: "REST is a hand-written JSON layer over gRPC: no grpc-gateway, no googleapis proto tree.",
-    code: "internal/api/grpc · internal/api/gateway",
-  },
-  {
-    label: "Routing",
-    title: "engine.Store",
-    body: "API-key scope, tenant routing, storage quotas, and QPS limits, enforced before a request reaches an engine.",
-    code: "internal/engine.Store",
-  },
-  {
-    label: "Write path",
-    title: "WAL → HNSW graph",
-    body: "Every write fsyncs to the WAL before ack (one fsync per batch), then applies to the in-memory graph.",
-    code: "internal/storage/wal · internal/index/hnsw",
-  },
-  {
-    label: "Durability",
-    title: "mmap-backed snapshot",
-    body: "Atomic write-and-rename snapshots let a restart skip WAL replay and page in from disk.",
-    code: "internal/storage/segment",
-  },
+import { useEffect, useState } from "react";
+import { SectionHeader } from "./section-header";
+import { REPO_URL } from "@/lib/site";
+
+type Stop = { name: string; save: string | null; find: string | null; path: string };
+
+// One row of stops; each mode lights the ones its request passes through.
+const STOPS: Stop[] = [
+  { name: "Your app", save: "sends an item", find: "sends a question", path: "clients/python" },
+  { name: "API", save: "gRPC or REST", find: "gRPC or REST", path: "internal/api" },
+  { name: "Gatekeeper", save: "checks your key", find: "checks your key", path: "internal/engine" },
+  { name: "Log on disk", save: "written first, survives a crash", find: null, path: "internal/storage/wal" },
+  { name: "Search graph", save: "item is linked in", find: "walks the links", path: "internal/index/hnsw" },
+  { name: "Backup file", save: "saved every 5 min", find: null, path: "internal/storage/segment" },
 ];
 
-export function ArchitectureSection() {
-  return (
-    <section id="architecture" className="relative bg-cream-deep py-28">
-      <div className="mx-auto max-w-6xl px-6">
-        <Reveal>
-          <p className="kicker mb-5">Architecture</p>
-          <h2 className="max-w-2xl text-[2rem] leading-tight font-semibold tracking-tight text-ink sm:text-[2.4rem]">
-            One request, four layers.
-          </h2>
-          <p className="mt-6 max-w-2xl text-[1.05rem] leading-relaxed text-ink-soft">
-            Every stage below is a real package in the repo, linked to its source.
-          </p>
-        </Reveal>
+const MODES = { save: "Saving an item", find: "Finding similar items" } as const;
+type Mode = keyof typeof MODES;
 
-        <div className="relative mt-20 grid gap-0">
-          {STAGES.map((stage, i) => (
-            <Reveal key={stage.title} delay={i * 0.08}>
-              <div className={`relative flex gap-6 ${i < STAGES.length - 1 ? "pb-8" : ""}`}>
-                <div className="flex flex-col items-center">
-                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-navy-600 bg-navy-900 font-mono-ui text-[0.72rem] text-glow-cyan">
-                    {i + 1}
-                  </span>
-                  {i < STAGES.length - 1 && (
-                    <span className="mt-1 w-px flex-1 bg-gradient-to-b from-navy-600 to-navy-600/20" />
-                  )}
-                </div>
-                <div className="flex-1 rounded-2xl border border-cream-line bg-white/60 p-7">
-                  <p className="kicker mb-3 !text-ink-faint">{stage.label}</p>
-                  <h3 className="text-[1.05rem] font-semibold text-ink">{stage.title}</h3>
-                  <p className="mt-3 max-w-2xl text-[0.92rem] leading-relaxed text-ink-soft">
-                    {stage.body}
-                  </p>
-                  <p className="mt-4 font-mono-ui text-[0.74rem] text-ink-faint">{stage.code}</p>
-                </div>
-              </div>
-            </Reveal>
+export function ArchitectureSection() {
+  const [mode, setMode] = useState<Mode>("save");
+  const [step, setStep] = useState(0);
+  const [paused, setPaused] = useState(false);
+  const route = STOPS.map((s, i) => (s[mode] ? i : -1)).filter((i) => i >= 0);
+  const at = route[step % route.length];
+
+  useEffect(() => {
+    if (paused || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const t = setInterval(() => setStep((s) => s + 1), 1100);
+    return () => clearInterval(t);
+  }, [paused]);
+
+  return (
+    <section id="architecture" className="bg-cream py-24">
+      <div className="mx-auto max-w-6xl px-6">
+        <SectionHeader title="What happens to your data">
+          <p>Saving goes to disk before anything else. Searching never waits on the disk.</p>
+        </SectionHeader>
+
+        <div role="tablist" aria-label="Request type" className="mt-10 flex gap-6 border-b border-ink/15">
+          {(Object.keys(MODES) as Mode[]).map((m) => (
+            <button
+              key={m}
+              type="button"
+              role="tab"
+              aria-selected={mode === m}
+              onClick={() => {
+                setMode(m);
+                setStep(0);
+              }}
+              className={`-mb-px border-b-2 py-3 text-[0.95rem] transition-colors ${
+                mode === m ? "border-teal text-ink" : "border-transparent text-ink-faint hover:text-ink-soft"
+              }`}
+            >
+              {MODES[m]}
+            </button>
           ))}
         </div>
+
+        <ol
+          className="dot-grid mt-8 grid grid-cols-1 gap-5 rounded-2xl border border-cream-line bg-[#f8f0dc] p-6 md:grid-cols-6 md:gap-0 md:p-10"
+          onMouseEnter={() => setPaused(true)}
+          onMouseLeave={() => setPaused(false)}
+        >
+          {STOPS.map((s, i) => {
+            const on = s[mode] !== null;
+            const here = i === at;
+            const passed = on && route.indexOf(i) <= route.indexOf(at);
+            return (
+              <li key={s.name} className={`relative flex items-start gap-4 md:block ${on ? "" : "opacity-30"}`}>
+                <div className="relative flex items-center md:mb-5">
+                  <span
+                    className={`relative z-10 flex h-11 w-11 shrink-0 items-center justify-center rounded-full border-2 font-mono-ui text-[0.85rem] transition-all duration-300 ${
+                      here ? "scale-110 border-ink bg-ink text-glow-cyan" : passed ? "border-teal bg-cream text-teal" : "border-ink/25 bg-cream text-ink-faint"
+                    }`}
+                  >
+                    {i + 1}
+                  </span>
+                  {i < STOPS.length - 1 && (
+                    <span className="relative mx-2 hidden h-0.5 flex-1 bg-ink/15 md:block">
+                      {here && <span className="flow-dot absolute top-1/2 h-2.5 w-2.5 -translate-y-1/2 rounded-full bg-teal" />}
+                    </span>
+                  )}
+                </div>
+                <div className="pr-4">
+                  <a
+                    href={`${REPO_URL}/tree/main/${s.path}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-semibold text-ink underline decoration-transparent underline-offset-4 hover:decoration-ink/40"
+                  >
+                    {s.name}
+                  </a>
+                  <p className={`mt-1 text-[0.88rem] leading-snug transition-colors ${here ? "text-ink" : "text-ink-soft"}`}>
+                    {s[mode] ?? "skipped"}
+                  </p>
+                </div>
+              </li>
+            );
+          })}
+        </ol>
       </div>
     </section>
   );
