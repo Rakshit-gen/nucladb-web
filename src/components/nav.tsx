@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowUpRight, Menu, X } from "lucide-react";
-import { GithubIcon } from "./icons";
+import { GithubIcon, NuclaMark } from "./icons";
 import { REPO_URL } from "@/lib/site";
 
 const LINKS = [
@@ -51,15 +51,7 @@ function useScrollState() {
 function Logo() {
   return (
     <Link href="/" className="flex shrink-0 items-center gap-2 text-[0.95rem] font-semibold tracking-tight text-white">
-      <span className="relative flex h-6 w-6 items-center justify-center">
-        <svg viewBox="0 0 24 24" fill="none" className="h-6 w-6">
-          <circle cx="6" cy="6" r="2.4" fill="#7fe3d4" />
-          <circle cx="18" cy="7" r="1.7" fill="#a78bfa" />
-          <circle cx="17" cy="18" r="2.4" fill="#7fe3d4" />
-          <circle cx="6" cy="16" r="1.5" fill="#f2c879" />
-          <path d="M6 6 L18 7 M18 7 L17 18 M17 18 L6 16 M6 16 L6 6 M6 6 L17 18" stroke="rgba(244,238,222,0.45)" strokeWidth="0.8" />
-        </svg>
-      </span>
+      <NuclaMark size={22} />
       NuclaDB
     </Link>
   );
