@@ -22,6 +22,9 @@
   --glow-violet: #a78bfa;
   --glow-amber: #f2c879;
 
+  --teal: #0f7a6b;
+  --rust: #b4532a;
+
   --radius-card: 1rem;
 }
 
@@ -44,6 +47,8 @@
   --color-glow-cyan: var(--glow-cyan);
   --color-glow-violet: var(--glow-violet);
   --color-glow-amber: var(--glow-amber);
+  --color-teal: var(--teal);
+  --color-rust: var(--rust);
 
   --font-sans: var(--font-sans);
   --font-serif: var(--font-serif);
@@ -75,10 +80,6 @@ section[id] {
   color: var(--navy-950);
 }
 
-.font-serif-display {
-  font-family: var(--font-serif), Georgia, serif;
-}
-
 .font-mono-ui {
   font-family: var(--font-mono), ui-monospace, monospace;
 }
@@ -105,17 +106,23 @@ section[id] {
   .hero-word, .hero-copy-enter { animation: none; }
 }
 
-/* Editorial section labels (small tracked uppercase, matches PRODUCT · API style refs) */
-.kicker {
-  font-family: var(--font-mono), ui-monospace, monospace;
-  font-size: 0.72rem;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--ink-faint);
+/* Diagonal stripes, used for the comparison system in charts. */
+.hatch {
+  background-image: repeating-linear-gradient(135deg, var(--ink-faint) 0 1px, transparent 1px 6px);
+}
+.dot-grid {
+  background-image: radial-gradient(var(--cream-line) 1px, transparent 1px);
+  background-size: 22px 22px;
 }
 
-.kicker--on-dark {
-  color: rgba(230, 232, 245, 0.55);
+.flow-dot {
+  animation: flow 1.1s cubic-bezier(0.5, 0, 0.5, 1) infinite;
+}
+@keyframes flow {
+  from { left: 0%; opacity: 0; }
+  15% { opacity: 1; }
+  85% { opacity: 1; }
+  to { left: 100%; opacity: 0; }
 }
 
 /* Fumadocs theme, mapped onto the site's own navy/cream palette */
