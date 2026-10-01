@@ -1,11 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Reveal } from "./reveal";
+import { SectionHeader } from "./section-header";
 import { REPO_URL } from "@/lib/site";
 
 type Status = "loading" | "ready" | "busy" | "error";
-type BusyAction = "insert" | "search" | null;
+type BusyAction = "insert" | "search" | "both" | null;
 
 type InsertPayload = { insertedCount: number; total: number; elapsedMs: number };
 type SearchPayload = {
@@ -41,6 +41,7 @@ export function PlaygroundSection() {
   const [corpusSize, setCorpusSize] = useState(0);
   const [insertResult, setInsertResult] = useState<InsertPayload | null>(null);
   const [searchResult, setSearchResult] = useState<SearchPayload | null>(null);
+  const [history, setHistory] = useState<SearchPayload[]>([]);
 
   const call = useCallback((cmd: string, args: Record<string, unknown>) => {
     return new Promise<unknown>((resolve, reject) => {
@@ -88,28 +89,23 @@ export function PlaygroundSection() {
     return () => worker.terminate();
   }, [call]);
 
-  async function handleInsert() {
-    setStatus("busy");
-    setBusyAction("insert");
-    try {
-      const res = (await call("insertRandom", { count: batchSize })) as InsertPayload;
-      setInsertResult(res);
-      setCorpusSize(res.total);
-      setStatus("ready");
-    } catch (err) {
-      setErrorMsg(String(err));
-      setStatus("error");
-    } finally {
-      setBusyAction(null);
-    }
+  async function insert() {
+    const res = (await call("insertRandom", { count: batchSize })) as InsertPayload;
+    setInsertResult(res);
+    setCorpusSize(res.total);
   }
 
-  async function handleSearch() {
+  async function search() {
+    const res = (await call("searchRandom", { topK: TOP_K, ef: EF_SEARCH })) as SearchPayload;
+    setSearchResult(res);
+    setHistory((h) => [res, ...h].slice(0, 6));
+  }
+
+  async function run(action: Exclude<BusyAction, null>, steps: (() => Promise<void>)[]) {
     setStatus("busy");
-    setBusyAction("search");
+    setBusyAction(action);
     try {
-      const res = (await call("searchRandom", { topK: TOP_K, ef: EF_SEARCH })) as SearchPayload;
-      setSearchResult(res);
+      for (const step of steps) await step();
       setStatus("ready");
     } catch (err) {
       setErrorMsg(String(err));
@@ -120,136 +116,198 @@ export function PlaygroundSection() {
   }
 
   const busy = status === "busy" || status === "loading";
+  const speedup = searchResult && searchResult.searchElapsedMs > 0
+    ? searchResult.bruteForceMs / searchResult.searchElapsedMs
+    : null;
 
   return (
-    <section id="playground" className="relative bg-navy-950 py-28 text-white">
+    <section id="playground" className="bg-navy-950 pt-24 pb-24 text-white">
       <div className="mx-auto max-w-6xl px-6">
-        <Reveal>
-          <div className="mb-4 flex items-center gap-3">
-            <p className="kicker kicker--on-dark">Playground · Runs in your browser</p>
-            <StatusDot status={status} />
-          </div>
-          <h2 className="max-w-2xl text-[2rem] leading-tight font-semibold tracking-tight sm:text-[2.4rem]">
-            This is the real engine, compiled to WebAssembly.
-          </h2>
-          <p className="mt-5 max-w-lg text-[0.98rem] leading-relaxed text-white/60">
-            This isn&rsquo;t a mock. <code className="font-mono-ui text-[0.85em] text-glow-cyan">internal/index/hnsw</code>{" "}
-            is the same package the server runs, compiled to WASM and running in
-            this tab. Insert vectors, run a search, and compare the timing and
-            recall against a live brute-force check.
+        <SectionHeader title="Try the index in your browser" dark>
+          <p>
+            <code className="font-mono-ui text-[0.88em] text-white">internal/index/hnsw</code>, the
+            package the server uses, compiled to WebAssembly and running in this tab.
+            Build an index, search it, and compare the answer with a full scan of every
+            vector.
           </p>
-        </Reveal>
+        </SectionHeader>
 
-        <Reveal delay={0.08}>
-          <div className="mt-10 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03] shadow-[0_30px_80px_-30px_rgba(6,10,25,0.7)]">
-            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 bg-white/[0.02] px-7 py-4">
-              <span className="font-mono-ui text-[0.76rem] text-white/40">
-                dim={DIM} &middot; cosine &middot; M={M} &middot; efConstruction={EF_CONSTRUCTION}
+        <div className="mt-12 rounded-lg border border-white/15">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/15 px-6 py-3.5 sm:px-7">
+              <span className="font-mono-ui text-[0.74rem] text-white/40">
+                dim={DIM} &middot; cosine &middot; M={M} &middot; efConstruction={EF_CONSTRUCTION} &middot; efSearch={EF_SEARCH}
               </span>
-              <span className="font-mono-ui text-[0.76rem] text-white/40">
-                {corpusSize.toLocaleString()} vectors indexed
+              <span className="font-mono-ui text-[0.74rem] text-white/60">
+                {status === "loading" ? "loading engine…" : status === "error" ? "engine failed to load" : `${corpusSize.toLocaleString()} vectors indexed`}
               </span>
             </div>
 
-            <div className="p-7">
-              <div className="flex flex-wrap items-center gap-4">
-                <div className="flex items-center gap-2">
-                  <span className="text-[0.82rem] text-white/50">Insert</span>
-                  <select
-                    value={batchSize}
-                    onChange={(e) => setBatchSize(Number(e.target.value))}
-                    disabled={busy}
-                    className="rounded-lg border border-white/15 bg-navy-950 px-3 py-2 font-mono-ui text-[0.82rem] text-white/85 transition-colors hover:border-white/25 disabled:opacity-50"
-                  >
+            <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+              <div className="border-b border-white/15 p-6 sm:p-7 lg:border-r lg:border-b-0">
+                <Step n={1} title="Build the index" done={corpusSize > 0}>
+                  <p className="mb-3 text-[0.82rem] text-white/50">Random {DIM}-dimension vectors per batch:</p>
+                  <div role="radiogroup" aria-label="Batch size" className="inline-flex flex-wrap gap-1 rounded-xl border border-white/10 bg-navy-950 p-1">
                     {BATCH_SIZES.map((n) => (
-                      <option key={n} value={n}>
-                        {n.toLocaleString()} vectors
-                      </option>
+                      <button
+                        key={n}
+                        type="button"
+                        role="radio"
+                        aria-checked={batchSize === n}
+                        disabled={busy}
+                        onClick={() => setBatchSize(n)}
+                        className={`rounded-lg px-3 py-1.5 font-mono-ui text-[0.78rem] transition-colors disabled:opacity-50 ${
+                          batchSize === n ? "bg-white/10 text-white" : "text-white/50 hover:text-white/80"
+                        }`}
+                      >
+                        {n.toLocaleString()}
+                      </button>
                     ))}
-                  </select>
-                </div>
+                  </div>
+                  <div className="mt-4">
+                    <button
+                      type="button"
+                      onClick={() => run("insert", [insert])}
+                      disabled={busy}
+                      className="inline-flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-[0.85rem] font-medium text-navy-950 transition-colors hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      {busyAction === "insert" && <Spinner dark />}
+                      {status === "loading"
+                        ? "Loading engine…"
+                        : busyAction === "insert"
+                          ? "Inserting…"
+                          : `Insert ${batchSize.toLocaleString()} vectors`}
+                    </button>
+                  </div>
+                  {insertResult && (
+                    <p className="mt-4 font-mono-ui text-[0.76rem] text-white/50">
+                      Last batch: {insertResult.insertedCount.toLocaleString()} in{" "}
+                      <span className="text-white/80">{insertResult.elapsedMs.toFixed(1)} ms</span>
+                      {" "}({Math.round((insertResult.insertedCount / insertResult.elapsedMs) * 1000).toLocaleString()}/s)
+                    </p>
+                  )}
+                </Step>
 
-                <button
-                  type="button"
-                  onClick={handleInsert}
-                  disabled={busy}
-                  className="inline-flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-[0.85rem] font-medium text-navy-950 transition-transform hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:translate-y-0"
-                >
-                  {busyAction === "insert" && <Spinner dark />}
-                  {status === "loading" ? "Loading engine…" : busyAction === "insert" ? "Inserting…" : "Insert"}
-                </button>
+                <Step n={2} title="Search it" done={searchResult !== null} last>
+                  <p className="mb-4 text-[0.82rem] text-white/50">
+                    A fresh random query, top {TOP_K}, through HNSW and through a full scan.
+                  </p>
+                  <div className="flex flex-wrap gap-3">
+                    <button
+                      type="button"
+                      onClick={() => run("search", [search])}
+                      disabled={busy || corpusSize === 0}
+                      className="inline-flex items-center gap-2 rounded-full border border-white/15 px-5 py-2.5 text-[0.85rem] font-medium text-white/85 transition-colors hover:border-white/35 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      {busyAction === "search" && <Spinner />}
+                      {busyAction === "search" ? "Searching…" : "Search"}
+                    </button>
+                    {corpusSize === 0 && (
+                      <button
+                        type="button"
+                        onClick={() => run("both", [insert, search])}
+                        disabled={busy}
+                        className="inline-flex items-center gap-2 rounded-full border border-glow-cyan/40 px-5 py-2.5 text-[0.85rem] font-medium text-glow-cyan transition-colors hover:border-glow-cyan disabled:cursor-not-allowed disabled:opacity-40"
+                      >
+                        {busyAction === "both" && <Spinner />}
+                        {busyAction === "both" ? "Working…" : `Insert ${batchSize.toLocaleString()} and search`}
+                      </button>
+                    )}
+                  </div>
+                </Step>
 
-                <button
-                  type="button"
-                  onClick={handleSearch}
-                  disabled={busy || corpusSize === 0}
-                  className="inline-flex items-center gap-2 rounded-full border border-white/15 px-5 py-2.5 text-[0.85rem] font-medium text-white/85 transition-colors hover:border-white/35 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
-                >
-                  {busyAction === "search" && <Spinner />}
-                  {busyAction === "search" ? "Searching…" : "Search"}
-                </button>
+                {status === "error" && (
+                  <p className="mt-6 rounded-lg border border-red-400/20 bg-red-400/5 px-4 py-3 text-[0.85rem] text-red-300/90">
+                    {errorMsg}
+                  </p>
+                )}
               </div>
 
-              {status === "error" && (
-                <p className="mt-5 rounded-lg border border-red-400/20 bg-red-400/5 px-4 py-3 text-[0.85rem] text-red-300/90">
-                  {errorMsg}
-                </p>
-              )}
-
-              {!insertResult && status !== "error" && (
-                <p className="mt-6 border-t border-white/10 pt-6 text-[0.85rem] text-white/40">
-                  Insert a batch to build the index, then search it.
-                </p>
-              )}
-
-              {insertResult && (
-                <div className="mt-7 grid grid-cols-2 gap-6 border-t border-white/10 pt-6 sm:grid-cols-3">
-                  <Stat label="vectors inserted" value={insertResult.insertedCount.toLocaleString()} />
-                  <Stat label="build time" value={`${insertResult.elapsedMs.toFixed(1)} ms`} />
-                  <Stat
-                    label="inserts / sec"
-                    value={Math.round((insertResult.insertedCount / insertResult.elapsedMs) * 1000).toLocaleString()}
-                  />
-                </div>
-              )}
-
-              {searchResult && (
-                <div className="mt-7 grid grid-cols-1 gap-8 border-t border-white/10 pt-6 lg:grid-cols-[1fr_auto]">
-                  <div className="grid grid-cols-2 gap-6 sm:grid-cols-4">
-                    <Stat label="search time" value={`${searchResult.searchElapsedMs.toFixed(3)} ms`} />
-                    <Stat label="brute-force time" value={`${searchResult.bruteForceMs.toFixed(3)} ms`} />
-                    <Stat label={`recall@${searchResult.topK}`} value={searchResult.recall.toFixed(3)} />
-                    <Stat label="corpus at query" value={searchResult.corpusSize.toLocaleString()} />
-                  </div>
-
-                  <div className="lg:w-64">
-                    <p className="mb-2 font-mono-ui text-[0.7rem] uppercase tracking-wider text-white/35">
-                      Top {Math.min(5, searchResult.results.length)} matches
+              <div className="p-6 sm:p-7" aria-live="polite">
+                {!searchResult ? (
+                  <div className="flex h-full min-h-56 flex-col justify-center">
+                    <p className="text-[0.9rem] text-white/60">Results show up here.</p>
+                    <p className="mt-2 max-w-sm text-[0.85rem] leading-relaxed text-white/45">
+                      Try a search at 1,000 vectors, then add more and search again: the
+                      full scan slows down as the index grows, HNSW barely does.
                     </p>
-                    <div className="space-y-1.5">
-                      {searchResult.results.slice(0, 5).map((r, i) => (
-                        <div
-                          key={r.id}
-                          className="flex items-center justify-between rounded-md bg-white/[0.03] px-3 py-1.5 font-mono-ui text-[0.76rem]"
-                        >
-                          <span className="text-white/50">
-                            #{i + 1} id={r.id}
-                          </span>
-                          <span className="text-glow-cyan">{r.distance.toFixed(4)}</span>
-                        </div>
-                      ))}
-                    </div>
                   </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </Reveal>
+                ) : (
+                  <div>
+                    <p className="text-[1.05rem] leading-snug text-white/85">
+                      {speedup !== null && (
+                        <>
+                          HNSW answered{" "}
+                          <span className="font-semibold text-glow-cyan">
+                            {speedup >= 1 ? `${speedup.toFixed(1)}× faster` : `${(1 / speedup).toFixed(1)}× slower`}
+                          </span>{" "}
+                          than the full scan
+                        </>
+                      )}{" "}
+                      and found{" "}
+                      <span className="font-semibold text-glow-cyan">
+                        {Math.round(searchResult.recall * searchResult.topK)} of the {searchResult.topK}
+                      </span>{" "}
+                      true nearest neighbours.
+                    </p>
 
-        <Reveal delay={0.14}>
-          <p className="mt-4 text-[0.8rem] text-white/35">
-            Query vector and ground truth are generated fresh each search, so recall
-            reflects this exact corpus.{" "}
+                    <div className="mt-6 grid grid-cols-3 gap-4">
+                      <Stat label="HNSW search" value={`${searchResult.searchElapsedMs.toFixed(3)} ms`} />
+                      <Stat label="full scan" value={`${searchResult.bruteForceMs.toFixed(3)} ms`} muted />
+                      <Stat label={`recall@${searchResult.topK}`} value={searchResult.recall.toFixed(2)} />
+                    </div>
+
+                    <div className="mt-7">
+                      <p className="mb-2.5 text-[0.8rem] text-white/45">
+                        Top {Math.min(5, searchResult.results.length)} matches · cosine distance, lower is closer
+                      </p>
+                      <div>
+                        {searchResult.results.slice(0, 5).map((r, i) => (
+                          <div key={r.id} className="flex items-center justify-between border-b border-white/10 py-1.5 font-mono-ui text-[0.78rem]">
+                            <span className="text-white/55">#{i + 1}  id {r.id}</span>
+                            <span className="text-white">{r.distance.toFixed(4)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {history.length > 1 && (
+                      <div className="mt-7">
+                        <p className="mb-2.5 text-[0.8rem] text-white/45">
+                          Your searches, newest first
+                        </p>
+                        <div className="overflow-x-auto">
+                          <table className="w-full font-mono-ui text-[0.74rem]">
+                            <thead>
+                              <tr className="text-left text-white/35">
+                                <th className="py-1 pr-4 font-normal">vectors</th>
+                                <th className="py-1 pr-4 font-normal">HNSW</th>
+                                <th className="py-1 pr-4 font-normal">full scan</th>
+                                <th className="py-1 font-normal">recall</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {history.map((h, i) => (
+                                <tr key={i} className="border-t border-white/5 text-white/60">
+                                  <td className="py-1.5 pr-4">{h.corpusSize.toLocaleString()}</td>
+                                  <td className="py-1.5 pr-4 text-glow-cyan">{h.searchElapsedMs.toFixed(3)} ms</td>
+                                  <td className="py-1.5 pr-4">{h.bruteForceMs.toFixed(3)} ms</td>
+                                  <td className="py-1.5">{h.recall.toFixed(2)}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+        </div>
+
+          <p className="mt-4 text-[0.82rem] text-white/45">
+            Timings come from your machine and vary between runs; very small corpora
+            can make the full scan the faster one.{" "}
             <a
               href={`${REPO_URL}/blob/main/cmd/wasm/main.go`}
               target="_blank"
@@ -260,31 +318,40 @@ export function PlaygroundSection() {
             </a>
             .
           </p>
-        </Reveal>
       </div>
     </section>
   );
 }
 
-function Stat({ label, value }: { label: string; value: string }) {
+function Step({
+  n,
+  title,
+  last = false,
+  children,
+}: {
+  n: number;
+  title: string;
+  done: boolean;
+  last?: boolean;
+  children: React.ReactNode;
+}) {
   return (
-    <div>
-      <p className="font-mono-ui text-xl font-medium text-glow-cyan">{value}</p>
-      <p className="mt-1 text-[0.76rem] text-white/45">{label}</p>
+    <div className={last ? "" : "mb-8 border-b border-white/10 pb-8"}>
+      <h3 className="mb-2 text-[0.95rem] font-semibold text-white">
+        <span className="mr-2 font-mono-ui text-white/45">{n}.</span>
+        {title}
+      </h3>
+      {children}
     </div>
   );
 }
 
-function StatusDot({ status }: { status: Status }) {
-  const color =
-    status === "error" ? "bg-red-400" : status === "loading" ? "bg-glow-amber" : "bg-glow-cyan";
-  const label =
-    status === "error" ? "error" : status === "loading" ? "loading" : status === "busy" ? "running" : "ready";
+function Stat({ label, value, muted = false }: { label: string; value: string; muted?: boolean }) {
   return (
-    <span className="inline-flex items-center gap-1.5 font-mono-ui text-[0.68rem] uppercase tracking-wider text-white/40">
-      <span className={`h-1.5 w-1.5 rounded-full ${color} ${status === "loading" ? "animate-pulse" : ""}`} />
-      {label}
-    </span>
+    <div className="min-w-0">
+      <p className={`font-mono-ui text-lg font-medium sm:text-xl ${muted ? "text-white/60" : "text-white"}`}>{value}</p>
+      <p className="mt-1 text-[0.76rem] text-white/45">{label}</p>
+    </div>
   );
 }
 
