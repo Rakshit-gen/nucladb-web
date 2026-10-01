@@ -1,188 +1,204 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { motion } from "framer-motion";
-import { Reveal } from "./reveal";
+import { SectionHeader } from "./section-header";
 
-const EF_ROWS = [
-  { ef: 10, nRecall: "0.932", qRecall: "0.959", nQps: 13914, qQps: 7624, nLat: "0.07 / 0.09", qLat: "0.13 / 0.17", nRss: "45.8 MB", qRss: "116.1 MB" },
-  { ef: 20, nRecall: "0.981", qRecall: "0.989", nQps: 13966, qQps: 7451, nLat: "0.07 / 0.09", qLat: "0.13 / 0.15", nRss: "45.8 MB", qRss: "116.2 MB" },
-  { ef: 50, nRecall: "0.996", qRecall: "0.998", nQps: 10653, qQps: 7051, nLat: "0.09 / 0.11", qLat: "0.14 / 0.16", nRss: "45.9 MB", qRss: "116.3 MB" },
-  { ef: 100, nRecall: "0.998", qRecall: "1.000", nQps: 7542, qQps: 6465, nLat: "0.13 / 0.16", qLat: "0.15 / 0.17", nRss: "45.9 MB", qRss: "116.5 MB" },
-  { ef: 200, nRecall: "1.000", qRecall: "1.000", nQps: 5822, qQps: 5512, nLat: "0.17 / 0.21", qLat: "0.18 / 0.22", nRss: "45.9 MB", qRss: "116.6 MB" },
+const ROWS = [
+  { ef: 10, n: { recall: 0.932, qps: 13914, lat: [0.07, 0.09], rss: 45.8 }, q: { recall: 0.959, qps: 7624, lat: [0.13, 0.17], rss: 116.1 } },
+  { ef: 20, n: { recall: 0.981, qps: 13966, lat: [0.07, 0.09], rss: 45.8 }, q: { recall: 0.989, qps: 7451, lat: [0.13, 0.15], rss: 116.2 } },
+  { ef: 50, n: { recall: 0.996, qps: 10653, lat: [0.09, 0.11], rss: 45.9 }, q: { recall: 0.998, qps: 7051, lat: [0.14, 0.16], rss: 116.3 } },
+  { ef: 100, n: { recall: 0.998, qps: 7542, lat: [0.13, 0.16], rss: 45.9 }, q: { recall: 1.0, qps: 6465, lat: [0.15, 0.17], rss: 116.5 } },
+  { ef: 200, n: { recall: 1.0, qps: 5822, lat: [0.17, 0.21], rss: 45.9 }, q: { recall: 1.0, qps: 5512, lat: [0.18, 0.22], rss: 116.6 } },
+];
+type Side = (typeof ROWS)[number]["n"];
+
+const METRICS: { id: string; label: string; better: string; get: (s: Side) => number; fmt: (v: number) => string; max: number }[] = [
+  { id: "qps", label: "Searches per second", better: "higher is better", get: (s) => s.qps, fmt: (v) => Math.round(v).toLocaleString("en-US"), max: 15000 },
+  { id: "rss", label: "Memory used", better: "lower is better", get: (s) => s.rss, fmt: (v) => `${v.toFixed(0)} MB`, max: 120 },
+  { id: "lat", label: "Time per search", better: "lower is better", get: (s) => s.lat[0], fmt: (v) => `${v.toFixed(2)} ms`, max: 0.2 },
+  { id: "recall", label: "Right answers", better: "higher is better", get: (s) => s.recall, fmt: (v) => `${(v * 100).toFixed(1)}%`, max: 1 },
 ];
 
-const MAX_QPS = Math.max(...EF_ROWS.flatMap((r) => [r.nQps, r.qQps]));
+// True once the element has scrolled into view.
+function useSeen<T extends Element>() {
+  const ref = useRef<T>(null);
+  const [seen, setSeen] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const io = new IntersectionObserver(([e]) => e.isIntersecting && setSeen(true), { threshold: 0.3 });
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+  return [ref, seen] as const;
+}
 
-function Bar({ pct, delay, className }: { pct: number; delay: number; className: string }) {
+function CountUp({ to, run, fmt }: { to: number; run: boolean; fmt: (v: number) => string }) {
+  const [v, setV] = useState(0);
+  useEffect(() => {
+    if (!run) return;
+    let raf = 0;
+    const t0 = performance.now();
+    const tick = (now: number) => {
+      const p = Math.min(1, (now - t0) / 1200);
+      setV(to * (1 - Math.pow(1 - p, 3)));
+      if (p < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [run, to]);
+  return <>{fmt(v)}</>;
+}
+
+function Bars({ run }: { run: boolean }) {
+  const [mi, setMi] = useState(0);
+  const [hover, setHover] = useState<number | null>(null);
+  const m = METRICS[mi];
   return (
-    <div className="h-2 flex-1 rounded-full bg-white/5">
-      <motion.div
-        className={`h-2 rounded-full ${className}`}
-        initial={{ width: 0 }}
-        whileInView={{ width: `${pct}%` }}
-        viewport={{ once: true, margin: "-40px" }}
-        transition={{ duration: 0.8, delay, ease: [0.16, 1, 0.3, 1] }}
-      />
+    <div>
+      <div role="tablist" aria-label="What to compare" className="flex flex-wrap gap-x-6 border-b border-ink/15">
+        {METRICS.map((x, i) => (
+          <button
+            key={x.id}
+            type="button"
+            role="tab"
+            aria-selected={mi === i}
+            onClick={() => setMi(i)}
+            className={`-mb-px border-b-2 py-3 text-[0.92rem] transition-colors ${
+              mi === i ? "border-teal text-ink" : "border-transparent text-ink-faint hover:text-ink-soft"
+            }`}
+          >
+            {x.label}
+          </button>
+        ))}
+      </div>
+
+      <div className="mt-6 flex items-center gap-6 text-[0.82rem] text-ink-soft">
+        <span className="flex items-center gap-2"><span className="h-3 w-3 bg-teal" /> NuclaDB</span>
+        <span className="flex items-center gap-2"><span className="hatch h-3 w-3 border border-ink/40" /> Qdrant</span>
+        <span className="ml-auto text-ink-faint">{m.better}</span>
+      </div>
+
+      <div className="mt-4 grid h-64 grid-cols-5 gap-3 border-b-2 border-ink bg-[linear-gradient(var(--cream-line)_1px,transparent_1px)] bg-[size:100%_25%] sm:gap-6">
+        {ROWS.map((r, i) => (
+          <div
+            key={r.ef}
+            className="relative flex items-end justify-center gap-1.5"
+            onMouseEnter={() => setHover(i)}
+            onMouseLeave={() => setHover(null)}
+          >
+            {[r.n, r.q].map((side, j) => {
+              const v = m.get(side);
+              return (
+                <div key={j} className="relative flex h-full w-full max-w-12 items-end">
+                  <div
+                    className={`w-full transition-[height] duration-700 ease-out ${j ? "hatch border border-ink/40 bg-cream" : "bg-teal"}`}
+                    style={{ height: run ? `${Math.max(1, (v / m.max) * 100)}%` : "0%", transitionDelay: `${i * 60}ms` }}
+                  />
+                  <span
+                    className={`absolute left-1/2 -translate-x-1/2 font-mono-ui text-[0.68rem] whitespace-nowrap text-ink transition-opacity ${
+                      hover === i ? "opacity-100" : "opacity-0"
+                    }`}
+                    style={{ bottom: `calc(${(v / m.max) * 100}% + 4px)` }}
+                  >
+                    {m.fmt(v)}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        ))}
+      </div>
+      <div className="mt-2 grid grid-cols-5 gap-3 text-center font-mono-ui text-[0.72rem] text-ink-faint sm:gap-6">
+        {ROWS.map((r) => (
+          <span key={r.ef}>effort {r.ef}</span>
+        ))}
+      </div>
     </div>
   );
 }
 
-export function BenchmarksSection() {
+// A table cell with a bar behind the number, so the column reads at a glance.
+function Bar({ value, max, us, children }: { value: number; max: number; us: boolean; children: React.ReactNode }) {
+  const pct = (value / max) * 100;
+  const color = us ? "rgba(15,122,107,0.22)" : "rgba(26,33,56,0.09)";
   return (
-    <section id="benchmarks" className="relative bg-navy-950 py-28 text-white">
+    <td className="py-2 pr-4" style={{ background: `linear-gradient(90deg, ${color} ${pct}%, transparent ${pct}%)` }}>
+      {children}
+    </td>
+  );
+}
+
+export function BenchmarksSection() {
+  const [ref, seen] = useSeen<HTMLDivElement>();
+  return (
+    <section id="benchmarks" className="bg-cream py-24">
       <div className="mx-auto max-w-6xl px-6">
-        <Reveal>
-          <p className="kicker kicker--on-dark mb-4">Benchmarks · Real numbers</p>
-          <h2 className="max-w-2xl text-[2rem] leading-tight font-semibold tracking-tight sm:text-[2.4rem]">
-            We measured our own weaknesses too.
-          </h2>
-          <p className="mt-5 max-w-md text-[0.98rem] leading-relaxed text-white/60">
-            A committed head-to-head against a real Qdrant binary. SIFT-small,
-            10K vectors, measured over each system&rsquo;s network API.
-          </p>
-        </Reveal>
+        <SectionHeader title="Against Qdrant, on the same machine">
+          <p>10,000 items, 100 searches, median of 5 runs. Hover the bars for numbers.</p>
+        </SectionHeader>
 
-        <div className="mt-16 grid grid-cols-1 gap-6 lg:grid-cols-3">
-          <Reveal className="min-w-0 lg:col-span-1">
-            <div className="h-full rounded-2xl border border-white/10 bg-white/[0.03] p-8">
-              <p className="kicker kicker--on-dark mb-4">Build time</p>
-              <p className="font-mono-ui text-5xl font-medium text-glow-amber">416ms</p>
-              <p className="mt-3 text-[0.9rem] leading-relaxed text-white/60">
-                to build 10K vectors vs Qdrant&rsquo;s 557ms, with every batch fsync&rsquo;d before ack.
-                Down from 43.9s with one fsync per vector.
-                <Link href="/docs/design-decisions/wal-then-snapshot" className="ml-1 underline decoration-white/30 underline-offset-2 hover:text-white">
-                  Why →
-                </Link>
+        <div ref={ref} className="mt-12 grid grid-cols-3 divide-x divide-ink/15 border-y-2 border-ink">
+          {[
+            { to: 1.8, fmt: (v: number) => `${v.toFixed(1)}×`, label: "up to, searches per second" },
+            { to: 2.5, fmt: (v: number) => `${v.toFixed(1)}×`, label: "less memory" },
+            { to: 416, fmt: (v: number) => `${Math.round(v)} ms`, label: "to load 10,000 items" },
+          ].map((s) => (
+            <div key={s.label} className="px-3 py-6 first:pl-0 sm:px-8 sm:first:pl-0">
+              <p className="font-mono-ui text-[1.5rem] leading-none font-medium tracking-[-0.03em] text-teal tabular-nums sm:text-[4rem]">
+                <CountUp to={s.to} run={seen} fmt={s.fmt} />
               </p>
+              <p className="mt-3 text-[0.85rem] text-ink-soft">{s.label}</p>
             </div>
-          </Reveal>
-
-          <Reveal delay={0.06} className="min-w-0 lg:col-span-1">
-            <div className="h-full rounded-2xl border border-white/10 bg-white/[0.03] p-8">
-              <p className="kicker kicker--on-dark mb-4">Memory, at every ef</p>
-              <p className="font-mono-ui text-5xl font-medium text-glow-cyan">&lt;½×</p>
-              <p className="mt-3 text-[0.9rem] leading-relaxed text-white/60">
-                RSS stays under half of Qdrant&rsquo;s at every efSearch tested
-                (about 46 MB vs 116 MB).
-              </p>
-            </div>
-          </Reveal>
-
-          <Reveal delay={0.12} className="min-w-0 lg:col-span-1">
-            <div className="h-full rounded-2xl border border-white/10 bg-white/[0.03] p-8">
-              <p className="kicker kicker--on-dark mb-4">Product quantization</p>
-              <p className="font-mono-ui text-5xl font-medium text-glow-violet">57.7%</p>
-              <p className="mt-3 text-[0.9rem] leading-relaxed text-white/60">
-                recall@10 at 16× compression for flat PQ; 99.3% when the top 100 are re-ranked.
-                A tested library, not yet used by the server.
-                <Link href="/docs/design-decisions/product-quantization-cost" className="ml-1 underline decoration-white/30 underline-offset-2 hover:text-white">
-                  Why →
-                </Link>
-              </p>
-            </div>
-          </Reveal>
+          ))}
         </div>
 
-        <Reveal delay={0.15} className="mt-16">
-          <p className="kicker kicker--on-dark mb-6">Queries per second, by efSearch</p>
-          <div className="space-y-5 rounded-2xl border border-white/10 bg-white/[0.03] p-7">
-            {EF_ROWS.map((row, i) => {
-              const nPct = (row.nQps / MAX_QPS) * 100;
-              const qPct = (row.qQps / MAX_QPS) * 100;
-              const rowDelay = i * 0.08;
-              return (
-                <motion.div
-                  key={row.ef}
-                  className="flex items-center gap-4"
-                  initial={{ opacity: 0, x: -8 }}
-                  whileInView={{ opacity: 1, x: 0 }}
-                  viewport={{ once: true, margin: "-40px" }}
-                  transition={{ duration: 0.5, delay: rowDelay }}
-                >
-                  <span className="w-12 shrink-0 font-mono-ui text-[0.78rem] text-white/40">ef {row.ef}</span>
-                  <div className="flex-1 space-y-2">
-                    <div className="flex items-center gap-3">
-                      <span className="w-16 shrink-0 font-mono-ui text-[0.7rem] uppercase tracking-wider text-white/40">
-                        NuclaDB
-                      </span>
-                      <Bar pct={nPct} delay={rowDelay + 0.1} className="bg-glow-cyan" />
-                      <span className="w-16 shrink-0 text-right font-mono-ui text-[0.78rem] text-glow-cyan">
-                        {row.nQps}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <span className="w-16 shrink-0 font-mono-ui text-[0.7rem] uppercase tracking-wider text-white/40">
-                        Qdrant
-                      </span>
-                      <Bar pct={qPct} delay={rowDelay + 0.18} className="bg-white/35" />
-                      <span className="w-16 shrink-0 text-right font-mono-ui text-[0.78rem] text-white/50">
-                        {row.qQps}
-                      </span>
-                    </div>
-                  </div>
-                </motion.div>
-              );
-            })}
-          </div>
-          <p className="mt-4 text-[0.82rem] text-white/40">
-            NuclaDB has higher QPS at every ef: 13914 vs 7624 at ef=10. Qdrant&rsquo;s recall is a
-            little higher at low ef (0.959 vs 0.932 at ef=10). Median of 5 passes after a warm-up.
+        <div className="mt-10 rounded-2xl border border-cream-line bg-[#f8f0dc] p-5 sm:p-8">
+          <Bars run={seen} />
+          <p className="mt-6 max-w-2xl text-[0.85rem] leading-relaxed text-ink-faint">
+            At the lowest effort, Qdrant gets slightly more answers right. Raise the
+            effort and both reach 100%.{" "}
+            <Link href="/docs/design-decisions/hnsw-ef-tuning" className="text-ink-soft underline decoration-ink/25 underline-offset-4 hover:text-ink">
+              How effort works
+            </Link>
           </p>
+        </div>
 
-          <details className="group mt-4">
-            <summary className="cursor-pointer font-mono-ui text-[0.78rem] text-white/40 transition-colors hover:text-white/70">
-              View full data table (recall@10, latency, RSS) &darr;
-            </summary>
-            <div className="relative mt-4">
-              <div className="overflow-x-auto rounded-2xl border border-white/10 bg-white/[0.03]">
-                <table className="w-full min-w-[880px] text-left font-mono-ui text-[0.82rem]">
-                <thead>
-                  <tr className="border-b border-white/10 text-white/40">
-                    <th className="px-5 py-3.5 font-normal">ef</th>
-                    <th className="px-5 py-3.5 font-normal">NuclaDB recall@10</th>
-                    <th className="px-5 py-3.5 font-normal">Qdrant recall@10</th>
-                    <th className="px-5 py-3.5 font-normal">NuclaDB QPS</th>
-                    <th className="px-5 py-3.5 font-normal">Qdrant QPS</th>
-                    <th className="px-5 py-3.5 font-normal">NuclaDB p50 / p95 ms</th>
-                    <th className="px-5 py-3.5 font-normal">Qdrant p50 / p95 ms</th>
-                    <th className="px-5 py-3.5 font-normal">NuclaDB RSS</th>
-                    <th className="px-5 py-3.5 font-normal">Qdrant RSS</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {EF_ROWS.map((row) => (
-                    <tr key={row.ef} className="border-b border-white/5 last:border-0">
-                      <td className="px-5 py-3 text-white/70">{row.ef}</td>
-                      <td className="px-5 py-3 text-glow-cyan">{row.nRecall}</td>
-                      <td className="px-5 py-3 text-white/50">{row.qRecall}</td>
-                      <td className="px-5 py-3 text-glow-cyan">{row.nQps}</td>
-                      <td className="px-5 py-3 text-white/50">{row.qQps}</td>
-                      <td className="px-5 py-3 text-glow-cyan">{row.nLat}</td>
-                      <td className="px-5 py-3 text-white/50">{row.qLat}</td>
-                      <td className="px-5 py-3 text-white/50">{row.nRss}</td>
-                      <td className="px-5 py-3 text-white/50">{row.qRss}</td>
+        <details className="group mt-10">
+          <summary className="inline-flex cursor-pointer list-none items-center gap-2 rounded-full border border-ink/25 px-4 py-2 text-[0.88rem] text-ink transition-colors hover:border-ink hover:bg-ink hover:text-cream">
+            All the numbers
+            <span aria-hidden="true" className="transition-transform group-open:rotate-180">↓</span>
+          </summary>
+          <div className="mt-4 overflow-x-auto">
+            <table className="w-full min-w-[640px] font-mono-ui text-[0.8rem]">
+              <thead>
+                <tr className="border-b-2 border-ink text-right text-[0.72rem] text-ink-soft">
+                  <th className="py-2 pr-4 text-left font-normal">efSearch</th>
+                  <th className="py-2 pr-4 font-normal">recall@10</th>
+                  <th className="py-2 pr-4 font-normal">queries/s</th>
+                  <th className="py-2 pr-4 font-normal">p50 ms</th>
+                  <th className="py-2 pr-4 font-normal">p95 ms</th>
+                  <th className="py-2 font-normal">RSS MB</th>
+                </tr>
+              </thead>
+              <tbody>
+                {ROWS.flatMap((r) =>
+                  (["n", "q"] as const).map((k) => (
+                    <tr key={`${r.ef}${k}`} className={`text-right transition-colors hover:bg-cream-deep ${k === "q" ? "border-b border-ink/15 text-ink-soft" : "font-medium text-ink"}`}>
+                      <td className={`py-1.5 pr-4 text-left ${k === "q" ? "pl-8" : ""}`}>{k === "n" ? `${r.ef} NuclaDB` : "Qdrant"}</td>
+                      <td className="py-2 pr-4">{r[k].recall.toFixed(3)}</td>
+                      <Bar value={r[k].qps} max={15000} us={k === "n"}>{r[k].qps.toLocaleString("en-US")}</Bar>
+                      <td className="py-2 pr-4">{r[k].lat[0].toFixed(2)}</td>
+                      <td className="py-2 pr-4">{r[k].lat[1].toFixed(2)}</td>
+                      <Bar value={r[k].rss} max={120} us={k === "n"}>{r[k].rss.toFixed(1)}</Bar>
                     </tr>
-                  ))}
-                </tbody>
-                </table>
-              </div>
-              <div className="pointer-events-none absolute inset-y-0 right-0 w-10 rounded-r-2xl bg-gradient-to-l from-navy-950 to-transparent md:hidden" />
-            </div>
-          </details>
-        </Reveal>
-
-        <Reveal delay={0.2} className="mt-10">
-          <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-glow-violet/[0.08] to-transparent p-7">
-            <p className="text-[0.9rem] leading-relaxed text-white/70">
-              <span className="font-semibold text-white">The benchmark caught two bugs in itself.</span>{" "}
-              Qdrant&rsquo;s default <code className="font-mono-ui text-glow-amber">full_scan_threshold</code> sits
-              above this dataset&rsquo;s size, so an out-of-the-box run compares HNSW against exact
-              search. Its <code className="font-mono-ui text-glow-amber">indexing_threshold</code> did the same
-              to build time: the old 124ms Qdrant build never built an index. Both are now forced.
-            </p>
+                  )),
+                )}
+              </tbody>
+            </table>
           </div>
-        </Reveal>
+        </details>
       </div>
     </section>
   );
