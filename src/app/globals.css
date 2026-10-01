@@ -69,6 +69,28 @@ body {
   font-family: var(--font-mono), ui-monospace, monospace;
 }
 
+.hero-word {
+  animation: hero-word-enter 1.25s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.hero-word-first { animation-delay: 0.15s; }
+.hero-word-second { animation-delay: 0.3s; }
+.hero-word-third { animation-delay: 0.5s; }
+.hero-copy-enter { animation: hero-copy-enter 1s ease-out 0.1s both; }
+.hero-copy-late { animation-delay: 0.8s; }
+
+@keyframes hero-word-enter {
+  from { opacity: 0; transform: translateY(38px) rotate(2deg); filter: blur(12px); }
+  to { opacity: 1; transform: translateY(0) rotate(0); filter: blur(0); }
+}
+@keyframes hero-copy-enter {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-word, .hero-copy-enter { animation: none; }
+}
+
 /* Editorial section labels (small tracked uppercase, matches PRODUCT · API style refs) */
 .kicker {
   font-family: var(--font-mono), ui-monospace, monospace;
