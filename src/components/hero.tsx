@@ -1,18 +1,17 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { HeroAscii } from "./hero-ascii";
-import { TerminalBlock } from "./terminal-block";
-import { INSTALL_CMD } from "@/lib/site";
+import { HeroSearchDemo } from "./hero-search-demo";
 
 export function Hero() {
   return (
-    <section className="relative flex min-h-[100svh] flex-col overflow-hidden bg-navy-950 pt-28 pb-16">
+    <section className="relative flex min-h-[100svh] flex-col overflow-hidden bg-navy-950 pt-36 pb-16">
+      <div className="pointer-events-none absolute inset-0 bg-navy-950" aria-hidden="true" />
       <HeroAscii />
 
-      <div className="relative z-10 mx-auto flex w-full max-w-6xl flex-1 flex-col justify-center px-6">
-        <p className="kicker kicker--on-dark mb-5">
-          Open-source vector database · written from scratch in Go
-        </p>
+
+      <div className="relative z-10 mx-auto flex w-full max-w-6xl flex-1 flex-col items-center gap-12 px-6">
+        <div className="flex min-w-0 flex-col items-center text-center">
         <h1 className="max-w-2xl text-[2.9rem] leading-[1.04] font-semibold tracking-tight text-white sm:text-[4.25rem]">
           Search by meaning,
           <br />
@@ -26,7 +25,7 @@ export function Hero() {
           NuclaDB is the engine.
         </p>
 
-        <div className="mt-9 flex flex-wrap items-center gap-4">
+        <div className="mt-9 flex flex-wrap items-center justify-center gap-4">
           <Link
             href="/docs"
             className="group flex items-center gap-2 rounded-full bg-white px-5 py-3 text-[0.85rem] font-medium text-navy-950 transition-transform hover:-translate-y-0.5"
@@ -42,7 +41,7 @@ export function Hero() {
           </a>
         </div>
 
-        <div className="mt-9 flex flex-wrap items-center gap-x-8 gap-y-2 border-t border-white/10 pt-6 font-mono-ui text-[0.78rem] text-white/40">
+        <div className="mt-9 flex flex-wrap items-center justify-center gap-x-8 gap-y-2 border-t border-white/10 pt-6 font-mono-ui text-[0.78rem] text-white/40">
           <span>
             <span className="text-white/80">46 MB</span> for 10K vectors
           </span>
@@ -54,19 +53,8 @@ export function Hero() {
           </span>
         </div>
 
-        <div className="mt-10 max-w-xl">
-          <TerminalBlock
-            title="quickstart"
-            copyText={`${INSTALL_CMD}\nnucladb-cli quickstart`}
-            lines={[
-              { text: "$ curl -fsSL .../install.sh | sh" },
-              { text: "$ nucladb-cli quickstart", muted: false },
-              { text: "  Starting a throwaway nucladbd (dim=4, metric=l2) ...", muted: true },
-              { text: "  $ nucladb-cli search -vector=1,0,0,0 -top-k=2", muted: true },
-              { text: "  export NUCLADB_ADDR=127.0.0.1:53211", muted: true },
-            ]}
-          />
         </div>
+        <div className="w-full max-w-2xl"><HeroSearchDemo /></div>
       </div>
 
       <div className="relative z-10 mx-auto mt-10 flex items-center gap-2 text-white/30">
