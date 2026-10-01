@@ -37,8 +37,7 @@ export function Footer() {
           <div className="col-span-2 sm:col-span-1">
             <p className="text-[0.95rem] font-semibold text-white">NuclaDB</p>
             <p className="mt-3 text-[0.82rem] leading-relaxed text-white/45">
-              A vector search engine, built from scratch in Go and benchmarked
-              honestly.
+              An open-source vector database, written in Go.
             </p>
           </div>
           {COLUMNS.map((col) => (
