@@ -16,10 +16,10 @@ export function Hero() {
           <span className="inline-block whitespace-nowrap"><span className="hero-word hero-word-first inline-block">Search</span>{" "}<span className="hero-word hero-word-second inline-block">by</span></span>{" "}
           <span className="hero-word hero-word-third inline-block text-glow-cyan">meaning.</span>
         </h1>
-        <p className="mt-6 max-w-md text-[0.98rem] leading-relaxed text-white/70">
-          A vector database finds the closest matches to an embedding, which is
-          what powers semantic search and RAG. Most wrap an existing engine;
-          NuclaDB is the engine.
+        <p className="hero-copy-enter hero-copy-late mt-5 max-w-lg text-balance text-[0.95rem] leading-[1.8] text-white/80 [text-shadow:0_1px_10px_var(--navy-950)] sm:text-base">
+          An open-source vector database, written in Go.
+          <br className="hidden sm:block" />{" "}
+          Store embeddings. Find the closest matches. Run it yourself.
         </p>
 
         <div className="mt-9 flex flex-wrap items-center justify-center gap-4">
