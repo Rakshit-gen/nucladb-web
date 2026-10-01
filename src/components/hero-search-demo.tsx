@@ -20,9 +20,8 @@ export function HeroSearchDemo() {
       setElapsed(0);
       const began = performance.now();
       timer = setInterval(() => {
-        const next = Math.min(7000, performance.now() - began);
+        const next = (performance.now() - began) % 8000;
         setElapsed(next);
-        if (next === 7000) clearInterval(timer);
       }, 50);
     };
     start();
