@@ -56,6 +56,20 @@ body {
   font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
+section[id] {
+  scroll-margin-top: 4.5rem;
+}
+
+:where(a, button, select, summary, [role="tab"]):focus-visible {
+  outline: 2px solid var(--glow-violet);
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+
 ::selection {
   background: var(--glow-cyan);
   color: var(--navy-950);
