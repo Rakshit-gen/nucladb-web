@@ -138,11 +138,11 @@ export function HeroAscii() {
       sync();
     });
     intersectionObserver.observe(canvas);
+    hero.addEventListener("pointermove", onMove, { passive: true });
+    hero.addEventListener("pointerleave", onLeave);
+    hero.addEventListener("pointerdown", onPress, { passive: true });
     reduced.addEventListener("change", sync);
     document.addEventListener("visibilitychange", sync);
-    void onMove;
-    void onLeave;
-    void onPress;
     resize();
     sync();
 
