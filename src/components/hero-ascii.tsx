@@ -78,7 +78,8 @@ export function HeroAscii() {
       if (now - last > 30) {
         const delta = Math.min((now - (last || now)) / 1000, 0.08);
         elapsed += delta;
-        const speed = 0.45;
+        // A fluid opening burst eases to ambient speed over roughly five seconds.
+        const speed = 0.45 + 11 * Math.exp(-elapsed / 1.25);
         time += delta * speed;
         animation.current = { time, elapsed };
         strength += (strengthTarget - strength) * 0.14;
