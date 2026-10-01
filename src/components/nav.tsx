@@ -1,17 +1,52 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowUpRight, Menu, X } from "lucide-react";
 import { GithubIcon } from "./icons";
 import { REPO_URL } from "@/lib/site";
 
 const LINKS = [
-  { href: "/docs", label: "Docs" },
   { href: "/#playground", label: "Playground" },
-  { href: "/#benchmarks", label: "Benchmarks" },
+  { href: "/#features", label: "Features" },
   { href: "/#architecture", label: "Architecture" },
+  { href: "/#benchmarks", label: "Benchmarks" },
+  { href: "/docs", label: "Docs" },
 ];
+
+// Tracks which landing-page section is in the middle of the screen, so the
+// nav can mark it, and whether the page has scrolled past the top.
+function useScrollState() {
+  const [scrolled, setScrolled] = useState(false);
+  const [active, setActive] = useState("");
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 24);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+
+    const sections = LINKS.flatMap((l) => {
+      const el = l.href.startsWith("/#") ? document.getElementById(l.href.slice(2)) : null;
+      return el ? [el] : [];
+    });
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const e of entries) {
+          if (e.isIntersecting) setActive(e.target.id);
+          else setActive((cur) => (cur === e.target.id ? "" : cur));
+        }
+      },
+      { rootMargin: "-45% 0px -50% 0px" },
+    );
+    sections.forEach((el) => observer.observe(el));
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      observer.disconnect();
+    };
+  }, []);
+
+  return { scrolled, active };
+}
 
 function Logo() {
   return (
@@ -32,17 +67,44 @@ function Logo() {
 
 export function Nav() {
   const [open, setOpen] = useState(false);
+  const { scrolled, active } = useScrollState();
+
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open]);
 
   return (
-    <header className="fixed inset-x-0 top-0 z-50 border-b border-white/[0.06] bg-navy-950/70 backdrop-blur-md">
+    <header
+      className={`fixed inset-x-0 top-0 z-50 border-b transition-colors duration-300 ${
+        scrolled || open
+          ? "border-white/[0.08] bg-navy-950/85 backdrop-blur-md"
+          : "border-transparent bg-transparent"
+      }`}
+    >
       <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
         <Logo />
         <nav className="hidden items-center gap-7 font-mono-ui text-[0.78rem] uppercase tracking-wider text-white/60 md:flex">
-          {LINKS.map((l) => (
-            <Link key={l.href} href={l.href} className="transition-colors hover:text-white">
-              {l.label}
-            </Link>
-          ))}
+          {LINKS.map((l) => {
+            const current = active !== "" && l.href === `/#${active}`;
+            return (
+              <Link
+                key={l.href}
+                href={l.href}
+                aria-current={current ? "true" : undefined}
+                className={`relative py-1 transition-colors hover:text-white ${current ? "text-white" : ""}`}
+              >
+                {l.label}
+                <span
+                  className={`absolute inset-x-0 -bottom-0.5 h-px origin-left bg-glow-cyan transition-transform duration-300 ${
+                    current ? "scale-x-100" : "scale-x-0"
+                  }`}
+                />
+              </Link>
+            );
+          })}
         </nav>
         <div className="flex items-center gap-3">
           <a
