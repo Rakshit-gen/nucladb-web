@@ -1,132 +1,49 @@
-import { ArrowUpRight, Database, GitBranch, Layers, Lock, Radio, ShieldCheck } from "lucide-react";
-import { Reveal } from "./reveal";
+import { SectionHeader } from "./section-header";
 import { REPO_URL } from "@/lib/site";
 
-type Status = "server" | "library";
-
-const FEATURES: {
-  icon: typeof GitBranch;
-  title: string;
-  plain: string;
-  body: string;
-  status: Status;
-  path: string;
-}[] = [
-  {
-    icon: GitBranch,
-    title: "HNSW, from scratch",
-    plain: "The graph structure that makes nearest-neighbour search fast.",
-    body: "The Malkov & Yashunin graph, RW-locked for correctness and verified under go test -race.",
-    status: "server",
-    path: "internal/index/hnsw",
-  },
-  {
-    icon: ShieldCheck,
-    title: "Crash-safe WAL",
-    plain: "No acknowledged write is lost, even on a power cut.",
-    body: "Every write fsync'd before ack, with group commit sharing one fsync across a batch. CRC32-checksummed records make replay torn-write-safe.",
-    status: "server",
-    path: "internal/storage/wal",
-  },
-  {
-    icon: Database,
-    title: "mmap-backed snapshots",
-    plain: "Serve a dataset that's larger than the machine's RAM.",
-    body: "Atomic write-and-rename, loaded via mmap so a dataset larger than RAM pages in.",
-    status: "server",
-    path: "internal/storage/segment",
-  },
-  {
-    icon: Lock,
-    title: "Real multi-tenancy",
-    plain: "Many isolated tenants share one server safely.",
-    body: "Isolated graph, WAL, and snapshot per tenant, with its own dimension, metric, quota and QPS limit, plus API keys scoped to tenants.",
-    status: "server",
-    path: "internal/engine",
-  },
-  {
-    icon: Layers,
-    title: "Product quantization",
-    plain: "Compresses vectors so the index fits in far less memory.",
-    body: "k-means++ codebooks with asymmetric distance, optional re-ranking and IVF.",
-    status: "library",
-    path: "internal/index/pq",
-  },
-  {
-    icon: Radio,
-    title: "Raft-coordinated cluster",
-    plain: "Spread search across several machines.",
-    body: "Consistent-hash sharding, scatter-gather search, async WAL replication with health-checked failover.",
-    status: "library",
-    path: "internal/cluster",
-  },
+const PARTS = [
+  { name: "Fast similarity search", what: "Finds the closest matches without checking every item.", live: true, path: "internal/index/hnsw" },
+  { name: "Crash-safe writes", what: "Once it says OK, your data survives a crash or power cut.", live: true, path: "internal/storage/wal" },
+  { name: "Quick restarts", what: "Reloads from a saved file instead of starting over.", live: true, path: "internal/storage/segment" },
+  { name: "Many apps, one server", what: "Each app gets its own space, key and limits.", live: true, path: "internal/engine" },
+  { name: "Works from any language", what: "gRPC, REST, a CLI and a Python client.", live: true, path: "internal/api" },
+  { name: "Compression", what: "Stores items in about a sixteenth of the space.", live: false, path: "internal/index/pq" },
+  { name: "Multiple machines", what: "Splits one collection across several servers.", live: false, path: "internal/cluster" },
 ];
-
-function StatusBadge({ status }: { status: Status }) {
-  return status === "server" ? (
-    <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-700/10 px-2.5 py-1 font-mono-ui text-[0.66rem] uppercase tracking-wider text-emerald-800">
-      <span className="h-1.5 w-1.5 rounded-full bg-emerald-600" />
-      In the server
-    </span>
-  ) : (
-    <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-600/10 px-2.5 py-1 font-mono-ui text-[0.66rem] uppercase tracking-wider text-amber-800">
-      <span className="h-1.5 w-1.5 rounded-full border border-amber-600" />
-      Tested library
-    </span>
-  );
-}
 
 export function ProductSection() {
   return (
-    <section id="features" className="relative bg-cream py-28">
+    <section id="features" className="bg-cream py-24">
       <div className="mx-auto max-w-6xl px-6">
-        <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1fr_auto] lg:items-end">
-          <Reveal>
-            <p className="kicker mb-5">Features · What&rsquo;s inside</p>
-            <h2 className="max-w-2xl text-[2rem] leading-tight font-semibold tracking-tight text-ink sm:text-[2.4rem]">
-              Most vector databases on GitHub{" "}
-              <span className="font-serif-display italic font-normal">wrap</span> an
-              existing engine.
-            </h2>
-            <p className="mt-6 max-w-md text-[0.98rem] leading-relaxed text-ink-soft">
-              NuclaDB <em>is</em> the engine. Each part below is its own package in the
-              repo, and each one says plainly whether the server uses it today.
-            </p>
-          </Reveal>
-          <Reveal delay={0.05}>
-            <div className="flex flex-wrap gap-2 lg:flex-col lg:items-end">
-              <StatusBadge status="server" />
-              <StatusBadge status="library" />
-            </div>
-          </Reveal>
-        </div>
+        <SectionHeader title="What it does">
+          <p>Everything is written from scratch in Go. Hover a row to see its source.</p>
+        </SectionHeader>
 
-        <div className="mt-14 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {FEATURES.map((f, i) => (
-            <Reveal key={f.title} delay={i * 0.05} className="h-full">
-              <article className="group flex h-full flex-col rounded-2xl border border-cream-line bg-white/55 p-7 transition-all duration-300 hover:-translate-y-1 hover:border-ink/15 hover:bg-white hover:shadow-[0_18px_40px_-24px_rgba(26,33,56,0.35)]">
-                <div className="mb-6 flex items-start justify-between gap-3">
-                  <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-navy-900 text-glow-cyan transition-transform duration-300 group-hover:scale-105">
-                    <f.icon size={18} strokeWidth={1.6} />
-                  </span>
-                  <StatusBadge status={f.status} />
-                </div>
-                <h3 className="text-[1.02rem] font-semibold text-ink">{f.title}</h3>
-                <p className="mt-2 text-[0.92rem] leading-relaxed text-ink">{f.plain}</p>
-                <p className="mt-3 text-[0.82rem] leading-relaxed text-ink-faint">{f.body}</p>
-                <a
-                  href={`${REPO_URL}/tree/main/${f.path}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="mt-auto inline-flex items-center gap-1 pt-6 font-mono-ui text-[0.74rem] text-ink-faint transition-colors hover:text-ink"
-                >
-                  {f.path}
-                  <ArrowUpRight size={12} className="transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
-                </a>
-              </article>
-            </Reveal>
+        <ul className="mt-10 border-t border-ink">
+          {PARTS.map((p, i) => (
+            <li key={p.name}>
+              <a
+                href={`${REPO_URL}/tree/main/${p.path}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group grid grid-cols-[2.5rem_minmax(0,1fr)_auto] items-baseline gap-x-4 gap-y-1 border-b border-ink/15 px-2 py-5 transition-colors duration-200 hover:bg-ink md:grid-cols-[3.5rem_16rem_minmax(0,1fr)_9rem] md:px-4"
+              >
+                <span className="font-mono-ui text-[0.85rem] text-ink-faint transition-colors group-hover:text-glow-cyan">
+                  {String(i + 1).padStart(2, "0")}
+                </span>
+                <span className="text-[1.15rem] font-medium tracking-[-0.01em] text-ink transition-colors group-hover:text-cream">{p.name}</span>
+                <span className="order-4 col-span-2 col-start-2 text-ink-soft transition-colors group-hover:text-cream/70 md:order-none md:col-span-1 md:col-start-auto">
+                  {p.what}
+                  <span className="mt-1 block font-mono-ui text-[0.78rem] text-glow-cyan opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">{p.path} ↗</span>
+                </span>
+                <span className={`flex items-center gap-2 justify-self-end font-mono-ui text-[0.78rem] ${p.live ? "text-teal group-hover:text-glow-cyan" : "text-rust group-hover:text-glow-amber"}`}>
+                  <span className={`h-2 w-2 rounded-full ${p.live ? "bg-current" : "border border-current"}`} />
+                  {p.live ? "in the server" : "coming next"}
+                </span>
+              </a>
+            </li>
           ))}
-        </div>
+        </ul>
       </div>
     </section>
   );
