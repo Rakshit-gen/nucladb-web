@@ -1,16 +1,13 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
-import { HeroDots } from "./hero-dots";
+import { HeroAscii } from "./hero-ascii";
 import { TerminalBlock } from "./terminal-block";
 import { INSTALL_CMD } from "@/lib/site";
 
 export function Hero() {
   return (
     <section className="relative flex min-h-[100svh] flex-col overflow-hidden bg-navy-950 pt-28 pb-16">
-      <div className="absolute inset-0 overflow-hidden bg-black" aria-hidden="true">
-        <HeroDots />
-        <div className="absolute inset-0 bg-gradient-to-r from-black via-black/70 to-transparent lg:via-black/35" />
-      </div>
+      <HeroAscii />
 
       <div className="relative z-10 mx-auto flex w-full max-w-6xl flex-1 flex-col justify-center px-6">
         <p className="kicker kicker--on-dark mb-5">
@@ -74,7 +71,7 @@ export function Hero() {
 
       <div className="relative z-10 mx-auto mt-10 flex items-center gap-2 text-white/30">
         <span className="font-mono-ui text-[0.68rem] uppercase tracking-[0.2em]">Scroll</span>
-        <span className="h-8 w-px animate-pulse bg-gradient-to-b from-white/40 to-transparent" />
+        <span className="h-8 w-px bg-white/30" />
       </div>
     </section>
   );
