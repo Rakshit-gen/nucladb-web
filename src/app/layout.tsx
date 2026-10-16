@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { IBM_Plex_Sans, IBM_Plex_Mono } from "next/font/google";
 import { RootProvider } from "fumadocs-ui/provider/next";
+import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 
 const sans = IBM_Plex_Sans({
@@ -53,6 +54,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="min-h-full flex flex-col bg-cream text-ink">
         <RootProvider theme={{ forcedTheme: "light", enableSystem: false }}>{children}</RootProvider>
+        <Analytics />
       </body>
     </html>
   );
