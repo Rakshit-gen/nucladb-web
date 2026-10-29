@@ -7,6 +7,7 @@ const PARTS = [
   { name: "Quick restarts", what: "Reloads from a saved file instead of starting over.", live: true, doc: "restarts" },
   { name: "Many apps, one server", what: "Each app gets its own space, key and limits.", live: true, doc: "tenants" },
   { name: "Works from any language", what: "gRPC, REST, a CLI and a Python client.", live: true, doc: "api" },
+  { name: "Memory for AI agents", what: "Lets Claude and other agents save and search notes.", live: true, doc: "mcp" },
   { name: "Compression", what: "Stores items in about a sixteenth of the space.", live: false, doc: "compression" },
   { name: "Multiple machines", what: "Splits one collection across several servers.", live: false, doc: "cluster" },
 ];
