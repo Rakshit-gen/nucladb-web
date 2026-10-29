@@ -1,0 +1,83 @@
+---
+title: MCP Server
+description: Give Claude and other AI agents a memory they can save to and search, backed by NuclaDB.
+---
+
+`nucladb-mcp` lets an agent like Claude Code or Claude Desktop store notes in a NuclaDB tenant and find them again later by meaning. It speaks MCP, the protocol those apps use to call outside tools.
+
+NuclaDB stores vectors, and an agent can't write one by hand. So the MCP server turns text into vectors itself with a small local model, `all-MiniLM-L6-v2` (384 numbers per text, runs on a laptop CPU, no API key, no per-call cost). The original text is kept in each vector's metadata, so a search hands back readable text.
+
+It is a client of the server, like the CLI. Nothing in `nucladbd` changes.
+
+## Install and start
+
+```sh
+pip install './clients/python[mcp]'
+./bin/nucladbd -data-dir=./data &
+NUCLADB_TENANT=memory nucladb-mcp
+```
+
+The first start downloads the model (90.9 MB) and took 54.5 s on an Apple M4. Every start after that took 6.9 s.
+
+If the tenant doesn't exist, it is created with 384 dimensions and the cosine metric. If it exists with a different size, the server refuses to start and says so, instead of failing on the agent's first write. The `default` tenant takes the server's `-dim` (128 unless you set it), so give the MCP server its own tenant.
+
+## Claude Code
+
+```sh
+claude mcp add nucladb -e NUCLADB_ADDR=localhost:9090 -e NUCLADB_TENANT=memory -- nucladb-mcp
+```
+
+## Claude Desktop
+
+Add this to `claude_desktop_config.json`. Desktop apps often don't see your shell's `PATH`, so use the full path from `which nucladb-mcp`:
+
+```json
+{
+  "mcpServers": {
+    "nucladb": {
+      "command": "/full/path/to/nucladb-mcp",
+      "env": { "NUCLADB_ADDR": "localhost:9090", "NUCLADB_TENANT": "memory" }
+    }
+  }
+}
+```
+
+## Tools
+
+| Tool | Does | Notes |
+|---|---|---|
+| `add_texts(texts, metadata?)` | Stores up to 256 texts | The id is a hash of the text, so adding the same text again updates it instead of storing a copy. The metadata key `text` is reserved |
+| `search(query, top_k=5, filters?)` | Closest texts to `query` | `top_k` is 1 to 50. `filters` is key=value pairs that all have to match |
+| `get(id)` | One text and its metadata | `null` if the id isn't stored |
+| `delete(id)` | Forgets one text | Deleting an unknown id is not an error |
+| `count()` | How many texts are stored | |
+
+`search`, `get` and `count` are marked read-only and `delete` is marked destructive, so clients that read those hints can skip the approval prompt for lookups. When the server rejects a call, the agent sees the reason (`nucladb: INVALID_ARGUMENT: ...`), not just "Error executing tool".
+
+## What a search looks like
+
+Four notes stored through the real model, then searched over MCP with the SDK's own client:
+
+| Asked | Top match | Score |
+|---|---|---|
+| where did I leave my car | I parked the car on level 3 of the airport garage. | 0.450 |
+| how is durability handled | The WAL is fsynced before a write touches the HNSW graph. | 0.911 |
+| rate limiting per customer | Tenants get quotas on vector count and queries per second. | 0.629 |
+
+All three came back right, and none share a key word with the note they found. The score is a distance (1 minus cosine similarity), so lower is closer. 0.911 is a weak match that still won because the other notes were further off.
+
+## Settings
+
+| Variable | Default | |
+|---|---|---|
+| `NUCLADB_ADDR` | `localhost:9090` | gRPC address |
+| `NUCLADB_TENANT` | the `default` tenant | Created on first start if missing |
+| `NUCLADB_API_KEY` | none | With a tenant-scoped key the startup size check is skipped, since listing tenants needs an admin key |
+| `NUCLADB_TLS` | off | `1` to connect over TLS |
+| `NUCLADB_MCP_MODEL` | `all-MiniLM-L6-v2` | Any sentence-transformers model. A different size needs a tenant made for it |
+
+## Limits
+
+- One tenant per running server. Register two servers with different `NUCLADB_TENANT` values to keep work and personal notes apart.
+- Search filters are exact key=value matches. The client's richer `where` operators (ranges, `in`, `exists`) aren't exposed yet.
+- The model reads only the first 256 tokens of a text (roughly 200 words), so split long documents before adding them.
