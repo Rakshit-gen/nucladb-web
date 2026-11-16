@@ -15,7 +15,7 @@ export default function SignInPage() {
         <dl className="mt-10 border-t border-white/10 font-mono-ui text-[0.85rem]">
           {[
             ["Requests", `${LIMITS.qps} per second`],
-            ["Vectors", LIMITS.vectors.toLocaleString("en")],
+            ["Vectors", `${LIMITS.vectors.toLocaleString("en")}, up to ${LIMITS.dim} numbers each`],
             ["Keys", `${LIMITS.keys} at a time`],
             ["Price", "free"],
           ].map(([k, v]) => (

@@ -24,6 +24,13 @@ async function workspace(): Promise<{ userId: string; ws?: Workspace }> {
   return { userId, ws: user.privateMetadata.nucladb as Workspace | undefined };
 }
 
+// indexCount counts users who have set up an index. It reads Clerk, not the
+// NuclaDB server, because the server forgets tenants on every redeploy.
+async function indexCount() {
+  const users = await (await clerkClient()).users.getUserList({ limit: 500 });
+  return users.data.filter((u) => u.privateMetadata.nucladb).length;
+}
+
 function message(e: unknown) {
   if (e instanceof NucladbError) {
     return e.status === 503 ? "The NuclaDB server didn't answer. It may be waking up; try again in 30 seconds." : e.message;
@@ -36,8 +43,13 @@ export async function setUpIndex(_: ActionResult, form: FormData): Promise<Actio
   if (existing) return { error: "Your index is already set up." };
   const dim = Number(form.get("dim"));
   const metric = String(form.get("metric")) as Metric;
-  if (!Number.isInteger(dim) || dim < 2 || dim > 4096) return { error: "Dimension must be a whole number from 2 to 4096." };
+  if (!Number.isInteger(dim) || dim < 2 || dim > LIMITS.dim) {
+    return { error: `Dimension must be a whole number from 2 to ${LIMITS.dim}.` };
+  }
   if (!METRICS.includes(metric)) return { error: "Pick a distance metric." };
+  if ((await indexCount()) >= LIMITS.indexes) {
+    return { error: "The free server is full right now, so no new indexes can be made. Try again later." };
+  }
 
   const ws: Workspace = { tenant: tenantFor(userId), dim, metric };
   try {

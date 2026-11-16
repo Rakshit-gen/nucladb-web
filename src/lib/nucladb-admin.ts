@@ -7,8 +7,10 @@ import { createHash } from "node:crypto";
 export const NUCLADB_URL = (process.env.NUCLADB_URL ?? "https://nucladb-demo.onrender.com").replace(/\/$/, "");
 
 // Every console user gets the same limits. The server enforces them per
-// tenant (max_qps and max_vectors); the key cap is the console's own.
-export const LIMITS = { qps: 10, vectors: 10_000, keys: 3 } as const;
+// tenant (max_qps and max_vectors); the rest are the console's own. dim and
+// indexes keep the free 512 MB instance from running out of memory: five
+// full indexes at 1536 floats are about 300 MB of vectors.
+export const LIMITS = { qps: 10, vectors: 10_000, keys: 3, dim: 1536, indexes: 5 } as const;
 
 export const METRICS = ["cosine", "l2", "dot"] as const;
 export type Metric = (typeof METRICS)[number];

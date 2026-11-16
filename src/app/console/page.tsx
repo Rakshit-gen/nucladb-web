@@ -27,7 +27,7 @@ export default async function ConsolePage() {
           create can read and write it. Tell us what kind of vectors you&apos;ll
           store; this is a one-time step.
         </Heading>
-        <SetupForm />
+        <SetupForm maxDim={LIMITS.dim} />
       </>
     );
   }

@@ -28,7 +28,7 @@ function Error({ text }: { text?: string }) {
   ) : null;
 }
 
-export function SetupForm() {
+export function SetupForm({ maxDim }: { maxDim: number }) {
   const [state, action, pending] = useActionState<ActionResult, FormData>(setUpIndex, {});
   const [dim, setDim] = useState(384);
 
@@ -64,7 +64,7 @@ export function SetupForm() {
               name="dim"
               type="number"
               min={2}
-              max={4096}
+              max={maxDim}
               required
               value={dim}
               onChange={(e) => setDim(Number(e.target.value))}
