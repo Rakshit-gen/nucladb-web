@@ -14,7 +14,7 @@ const primary =
 const quiet = "font-mono-ui text-[0.8rem] text-white/55 hover:text-white disabled:opacity-40";
 
 const PRESETS = [
-  { dim: 384, label: "384", note: "all-MiniLM-L6-v2, bge-small" },
+  { dim: 384, label: "384", note: "all-MiniLM-L6-v2, bge-small, the MCP server" },
   { dim: 768, label: "768", note: "nomic-embed-text, bge-base" },
   { dim: 1024, label: "1024", note: "bge-large, Cohere embed v3" },
   { dim: 1536, label: "1536", note: "OpenAI text-embedding-3-small" },
@@ -295,7 +295,10 @@ function KeysPanel({
   );
 }
 
-const TABS = ["curl", "Python", "TypeScript"] as const;
+const TABS = ["curl", "Python", "TypeScript", "MCP"] as const;
+
+// nucladb-mcp embeds text with all-MiniLM-L6-v2, which makes 384 numbers.
+const MCP_DIM = 384;
 
 function Usage({ url, tenant, dim, qps, apiKey }: { url: string; tenant: string; dim: number; qps: number; apiKey: string }) {
   const [tab, setTab] = useState<(typeof TABS)[number]>("curl");
@@ -352,6 +355,19 @@ const res = await fetch(\`\${URL}/v1/search\`, {
   body: JSON.stringify({ tenant_id: TENANT, query: queryEmbedding, top_k: 5 }),
 });
 const { matches = [] } = await res.json();`,
+    MCP: `${
+      dim === MCP_DIM
+        ? "# Gives Claude Code a memory it can save notes to and search by meaning.\n# Text is turned into vectors on your machine; no model API key needed."
+        : `# nucladb-mcp makes ${MCP_DIM}-number vectors, and this index takes ${dim},\n# so it won't fit. It needs an index set up with ${MCP_DIM} dimensions.`
+    }
+pip install "nucladb[mcp] @ git+https://github.com/Rakshit-gen/NuclaDB#subdirectory=clients/python"
+
+claude mcp add nucladb \\
+  -e NUCLADB_URL=${url} \\
+  -e NUCLADB_TENANT=${tenant} \\
+  -e NUCLADB_API_KEY=${apiKey || "nk_..."} -- nucladb-mcp
+
+# Then ask Claude to remember something, and ask about it in a later session.`,
   }[tab];
 
   return (

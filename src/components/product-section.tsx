@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { SectionHeader } from "./section-header";
 import { REPO_URL } from "@/lib/site";
 
@@ -7,7 +8,7 @@ const PARTS = [
   { name: "Quick restarts", what: "Reloads from a saved file instead of starting over.", live: true, doc: "restarts" },
   { name: "Many apps, one server", what: "Each app gets its own space, key and limits.", live: true, doc: "tenants" },
   { name: "Works from any language", what: "gRPC, REST, a CLI and a Python client.", live: true, doc: "api" },
-  { name: "Memory for AI agents", what: "Lets Claude and other agents save and search notes.", live: true, doc: "mcp" },
+  { name: "Memory for AI agents", what: "Lets Claude and other agents save and search notes.", live: true, doc: "mcp", site: "/docs/mcp" },
   { name: "Compression", what: "Stores items in about a sixteenth of the space.", live: false, doc: "compression" },
   { name: "Multiple machines", what: "Splits one collection across several servers.", live: false, doc: "cluster" },
 ];
@@ -23,10 +24,9 @@ export function ProductSection() {
         <ul className="mt-10 border-t border-ink">
           {PARTS.map((p, i) => (
             <li key={p.name}>
-              <a
-                href={`${REPO_URL}/blob/main/docs/features/${p.doc}.md`}
-                target="_blank"
-                rel="noopener noreferrer"
+              <Link
+                href={p.site ?? `${REPO_URL}/blob/main/docs/features/${p.doc}.md`}
+                {...(p.site ? {} : { target: "_blank", rel: "noopener noreferrer" })}
                 className="group grid grid-cols-[2.5rem_minmax(0,1fr)_auto] items-baseline gap-x-4 gap-y-1 border-b border-ink/15 px-2 py-5 transition-colors duration-200 hover:bg-ink md:grid-cols-[3.5rem_16rem_minmax(0,1fr)_9rem] md:px-4"
               >
                 <span className="font-mono-ui text-[0.85rem] text-ink-faint transition-colors group-hover:text-glow-cyan">
@@ -41,7 +41,7 @@ export function ProductSection() {
                   <span className={`h-2 w-2 rounded-full ${p.live ? "bg-current" : "border border-current"}`} />
                   {p.live ? "in the server" : "coming next"}
                 </span>
-              </a>
+              </Link>
             </li>
           ))}
         </ul>
