@@ -12,6 +12,7 @@ const LINKS = [
   { href: "/#architecture", label: "Architecture" },
   { href: "/#benchmarks", label: "Benchmarks" },
   { href: "/docs", label: "Docs" },
+  { href: "/console", label: "API keys" },
 ];
 
 // Tracks which landing-page section is in the middle of the screen, so the
