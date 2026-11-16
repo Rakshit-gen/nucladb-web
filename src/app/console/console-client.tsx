@@ -297,16 +297,17 @@ function KeysPanel({
 
 const TABS = ["curl", "Python", "TypeScript"] as const;
 
-function Usage({ url, tenant, dim, apiKey }: { url: string; tenant: string; dim: number; apiKey: string }) {
+function Usage({ url, tenant, dim, qps, apiKey }: { url: string; tenant: string; dim: number; qps: number; apiKey: string }) {
   const [tab, setTab] = useState<(typeof TABS)[number]>("curl");
   const vec = `[${dim} numbers]`;
   const code = {
     curl: `export NUCLADB_API_KEY=${apiKey || "nk_..."}   # your key
 
-# 1. store vectors (same id again replaces it); send up to a few hundred per request
+# 1. store vectors. ids are whole numbers; the same id again replaces it.
+#    Up to ${qps} vectors per request, and each vector counts toward ${qps}/s.
 curl -s ${url}/v1/vectors:batch \\
   -H "Authorization: Bearer $NUCLADB_API_KEY" \\
-  -d '{"vectors":[{"id":"doc-1","values":${vec},"metadata":{"title":"Hello"},"tenant_id":"${tenant}"}]}'
+  -d '{"vectors":[{"id":"1","values":${vec},"metadata":{"title":"Hello"},"tenant_id":"${tenant}"}]}'
 
 # 2. search: returns the 5 stored vectors closest to the query
 curl -s ${url}/v1/search \\
@@ -318,9 +319,10 @@ URL = "${url}"
 TENANT = "${tenant}"
 HEADERS = {"Authorization": f"Bearer {os.environ['NUCLADB_API_KEY']}"}
 
-# 1. store vectors. embedding is a list of ${dim} floats from your model
+# 1. store vectors. embedding is a list of ${dim} floats from your model.
+#    ids are whole numbers as strings; send at most ${qps} vectors per request.
 requests.post(f"{URL}/v1/vectors:batch", headers=HEADERS, json={
-    "vectors": [{"id": "doc-1", "values": embedding, "metadata": {"title": "Hello"}, "tenant_id": TENANT}],
+    "vectors": [{"id": "1", "values": embedding, "metadata": {"title": "Hello"}, "tenant_id": TENANT}],
 }).raise_for_status()
 
 # 2. search: the 5 stored vectors closest to query_embedding
@@ -333,12 +335,13 @@ for m in res.json().get("matches", []):
 const TENANT = "${tenant}";
 const headers = { Authorization: \`Bearer \${process.env.NUCLADB_API_KEY}\` };
 
-// 1. store vectors. embedding is a number[] of length ${dim} from your model
+// 1. store vectors. embedding is a number[] of length ${dim} from your model.
+//    ids are whole numbers as strings; send at most ${qps} vectors per request.
 await fetch(\`\${URL}/v1/vectors:batch\`, {
   method: "POST",
   headers,
   body: JSON.stringify({
-    vectors: [{ id: "doc-1", values: embedding, metadata: { title: "Hello" }, tenant_id: TENANT }],
+    vectors: [{ id: "1", values: embedding, metadata: { title: "Hello" }, tenant_id: TENANT }],
   }),
 });
 
@@ -476,6 +479,7 @@ export function Workbench({
   url,
   tenant,
   dim,
+  qps,
   aside,
 }: {
   keys: KeyInfo[];
@@ -484,6 +488,7 @@ export function Workbench({
   url: string;
   tenant: string;
   dim: number;
+  qps: number;
   aside: ReactNode;
 }) {
   const [apiKey, setApiKey] = useState("");
@@ -493,7 +498,7 @@ export function Workbench({
         <KeysPanel keys={keys} max={max} disabled={disabled} onCreated={setApiKey} />
         {aside}
       </div>
-      <Usage url={url} tenant={tenant} dim={dim} apiKey={apiKey} />
+      <Usage url={url} tenant={tenant} dim={dim} qps={qps} apiKey={apiKey} />
     </MotionConfig>
   );
 }

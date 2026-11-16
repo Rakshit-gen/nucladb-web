@@ -69,6 +69,7 @@ export default async function ConsolePage() {
         url={NUCLADB_URL}
         tenant={ws.tenant}
         dim={ws.dim}
+        qps={LIMITS.qps}
         aside={
           <aside>
             <h2 className="text-[1.05rem] font-medium">Connection details</h2>
@@ -101,7 +102,7 @@ export default async function ConsolePage() {
               <Row
                 label="Rate limit"
                 value={`${LIMITS.qps} requests/s`}
-                hint="Faster than this gets HTTP 429; wait and retry."
+                hint={`Each vector in a batch counts as one, so batches hold at most ${LIMITS.qps}. Faster gets HTTP 429; wait and retry.`}
               />
               <div className="border-b border-white/10 py-3">
                 <div className="flex justify-between">
